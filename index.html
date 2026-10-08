@@ -333,17 +333,25 @@ function updateHealth(){
 }
 function persist(){save('radar_settings',settings)}
 function setFilterUI(){document.querySelectorAll('#fieldFilters input').forEach(el=>{el.checked=settings.fields.includes(el.value)});document.querySelectorAll('#typeFilters input').forEach(el=>{el.checked=settings.types.includes(el.value)});$('sourceFilter').value=settings.source;$('search').value=settings.search;$('showEnded').checked=settings.showEnded!==false;document.querySelectorAll('#eventLegend input').forEach(el=>{el.checked=settings.events.includes(el.value)});}
+function startDeadlineLabel(e,compact){
+ if(e.type!=='start'||!e.job.end_date||!dateOnly(e.date)||!dateOnly(e.job.end_date))return '';
+ const left=daysBetween(e.date,e.job.end_date);
+ if(left<0)return '마감일 확인';
+ if(left===0)return '마감 D-Day';
+ return (compact?'D-':'마감 D-')+left;
+}
+function addStartCountdown(e){const label=startDeadlineLabel(e,false);return label?'<span class="quick-countdown">'+esc(label)+'</span>':'';}
 function renderCalendar(){const [yy,mm]=(settings.month||dayNow().slice(0,7)).split('-').map(Number);$('monthTitle').textContent=`${yy}년 ${mm}월`;const first=new Date(yy,mm-1,1).getDay(),total=new Date(yy,mm,0).getDate();const chosen=settings.selected||dayNow();const evs=eventsFor(visible());const map=new Map();for(const e of evs){if(!map.has(e.date))map.set(e.date,[]);map.get(e.date).push(e)}let html=['일','월','화','수','목','금','토'].map(d=>`<div class="weekday">${d}</div>`).join('');const cells=Math.ceil((first+total)/7)*7;
- for(let i=0;i<cells;i++){const n=i-first+1,inMonth=n>0&&n<=total;const dt=inMonth?`${yy}-${String(mm).padStart(2,'0')}-${String(n).padStart(2,'0')}`:'';const dayEvents=map.get(dt)||[];html+=`<div class="day ${inMonth?'':'other'} ${dt===chosen?'chosen':''} ${dt===dayNow()?'today':''}" data-date="${dt}" ${inMonth?`tabindex="0" role="button" aria-label="${dt} 일정 ${dayEvents.length}개, 날짜 선택"`:''}><div class="num">${inMonth?n:''}</div>${dayEvents.slice(0,(window.innerWidth<=730?2:3)).map(e=>`<div class="day-event ${e.type} ${isApplied(e.job)?'applied-event':''} ${e.job.end_date&&e.job.end_date<dayNow()?'is-archived':''}" style="--event:${eventColor(e.type)}" title="${esc(e.job.company)} · ${EVENT_NAMES[e.type]}"><small>${EVENT_NAMES[e.type]}</small><span class="event-company">${esc(e.job.company)}</span></div>`).join('')}${dayEvents.length>(window.innerWidth<=730?2:3)?`<span class="more">+${dayEvents.length-(window.innerWidth<=730?2:3)}개 더보기</span>`:''}</div>`}
+ for(let i=0;i<cells;i++){const n=i-first+1,inMonth=n>0&&n<=total;const dt=inMonth?`${yy}-${String(mm).padStart(2,'0')}-${String(n).padStart(2,'0')}`:'';const dayEvents=map.get(dt)||[];html+=`<div class="day ${inMonth?'':'other'} ${dt===chosen?'chosen':''} ${dt===dayNow()?'today':''}" data-date="${dt}" ${inMonth?`tabindex="0" role="button" aria-label="${dt} 일정 ${dayEvents.length}개, 날짜 선택"`:''}><div class="num">${inMonth?n:''}</div>${dayEvents.slice(0,(window.innerWidth<=730?2:3)).map(e=>`<div class="day-event ${e.type} ${isApplied(e.job)?'applied-event':''} ${e.job.end_date&&e.job.end_date<dayNow()?'is-archived':''}" style="--event:${eventColor(e.type)}" title="${esc(e.job.company)} · ${EVENT_NAMES[e.type]}"><small>${EVENT_NAMES[e.type]}</small><span class="event-company">${esc(e.job.company)}</span>${startDeadlineLabel(e,true)?`<span class="day-countdown" title="${esc(startDeadlineLabel(e,false))}">${esc(startDeadlineLabel(e,window.innerWidth<=730))}</span>`:''}</div>`).join('')}${dayEvents.length>(window.innerWidth<=730?2:3)?`<span class="more">+${dayEvents.length-(window.innerWidth<=730?2:3)}개 더보기</span>`:''}</div>`}
  $('calendarGrid').innerHTML=html;renderSelected(map);}
 function quickDateOffset(dt,step){const parts=dt.split('-').map(Number);const d=new Date(parts[0],parts[1]-1,parts[2]+step,12);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function showQuickDate(dt,moveFocus){if(!dateOnly(dt))return;settings.selected=dt;settings.month=dt.slice(0,7);render();const order={close:0,start:1,result:2,test:3};const evs=eventsFor(visible()).filter(e=>e.date===dt).sort((a,b)=>(order[a.type]??9)-(order[b.type]??9)||a.job.company.localeCompare(b.job.company,'ko'));
 const d=new Date(dt+'T12:00:00');const weekday=d.toLocaleDateString('ko-KR',{weekday:'short'});$('quickDateTitle').textContent=md(dt)+' ('+weekday+')';$('quickDateCount').textContent=evs.length+'개 일정 · '+new Set(evs.map(e=>e.job.id)).size+'개 공고';
-$('quickDayEvents').innerHTML=evs.length?evs.map(e=>'<button class="quick-item" type="button" data-id="'+esc(e.job.id)+'"><span class="quick-type '+e.type+'">'+EVENT_NAMES[e.type]+'</span><span class="quick-item-main"><strong>'+esc(e.job.company)+'</strong>'+(isApplied(e.job)?'<span class="application-badge">✓ '+esc(getRecord(e.job)?.status||'지원완료')+'</span>':'')+'<small>'+esc(e.job.title)+'</small></span><span class="quick-arrow" aria-hidden="true">›</span></button>').join(''):'<div class="quick-empty"><strong>이 날짜에 표시할 일정이 없어요.</strong>다른 날짜를 선택하거나 필터를 확인해 주세요.</div>';
-$('quickDayEvents').scrollTop=0;$('dateQuickView').hidden=false;document.body.style.overflow='hidden';if(moveFocus!==false)$('quickClose').focus({preventScroll:true})}
-function hideQuickDate(restoreFocus){$('dateQuickView').hidden=true;document.body.style.overflow='';if(restoreFocus!==false){const cell=Array.from(document.querySelectorAll('#calendarGrid .day[data-date]')).find(x=>x.dataset.date===settings.selected);if(cell)cell.focus({preventScroll:true})}}
+$('quickDayEvents').innerHTML=evs.length?evs.map(e=>'<button class="quick-item" type="button" data-id="'+esc(e.job.id)+'"><span class="quick-type '+e.type+'">'+EVENT_NAMES[e.type]+'</span><span class="quick-item-main"><strong>'+esc(e.job.company)+'</strong>'+(isApplied(e.job)?'<span class="application-badge">✓ '+esc(getRecord(e.job)?.status||'지원완료')+'</span>':'')+'<small>'+esc(e.job.title)+'</small>'+addStartCountdown(e)+'</span><span class="quick-arrow" aria-hidden="true">›</span></button>').join(''):'<div class="quick-empty"><strong>이 날짜에 표시할 일정이 없어요.</strong>다른 날짜를 선택하거나 필터를 확인해 주세요.</div>';
+$('quickDayEvents').scrollTop=0;$('dateQuickView').hidden=false;if(moveFocus===true)$('quickClose').focus({preventScroll:true})}
+function hideQuickDate(restoreFocus){$('dateQuickView').hidden=true;if(restoreFocus!==false){const cell=Array.from(document.querySelectorAll('#calendarGrid .day[data-date]')).find(x=>x.dataset.date===settings.selected);if(cell)cell.focus({preventScroll:true})}}
 function eventColor(t){return {start:'#2f83eb',close:'#f06777',result:'#21ac88',test:'#a46af3'}[t]||'#556'}
-function renderSelected(map){const dt=settings.selected||dayNow();$('selectedDateTitle').textContent=md(dt)+' 일정';const evs=map.get(dt)||[];$('selectedEvents').innerHTML=evs.length?evs.map(e=>`<div class="day-event-row"><span class="event-type ${e.type}">${EVENT_NAMES[e.type]}</span><button data-id="${esc(e.job.id)}"><strong>${esc(e.job.company)}</strong><small>${esc(e.job.title)}</small></button><span class="pill">${esc(e.job.company_type)}</span></div>`).join(''):'<div class="empty" style="padding:18px">선택한 조건에 해당하는 일정이 없어요.</div>'}
+function renderSelected(map){const dt=settings.selected||dayNow();$('selectedDateTitle').textContent=md(dt)+' 일정';const evs=map.get(dt)||[];$('selectedEvents').innerHTML=evs.length?evs.map(e=>`<div class="day-event-row"><span class="event-type ${e.type}">${EVENT_NAMES[e.type]}</span><button data-id="${esc(e.job.id)}"><strong>${esc(e.job.company)}</strong><small>${esc(e.job.title)}</small>${startDeadlineLabel(e,false)?`<span class="start-deadline">${esc(startDeadlineLabel(e,false))}</span>`:''}</button><span class="pill">${esc(e.job.company_type)}</span></div>`).join(''):'<div class="empty" style="padding:18px">선택한 조건에 해당하는 일정이 없어요.</div>'}
 function renderList(){
  const list=visible(),sort=$('sortFilter').value;
  list.sort((a,b)=>{
@@ -378,7 +386,31 @@ function allEventsSetup(){document.querySelectorAll('#fieldFilters input').forEa
  $('calendarGrid').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('.day[data-date]')){e.preventDefault();showQuickDate(e.target.dataset.date)}});
  $('quickClose').onclick=()=>hideQuickDate();document.querySelector('#dateQuickView [data-quick-close]').onclick=()=>hideQuickDate();
 $('quickPrev').onclick=()=>showQuickDate(quickDateOffset(settings.selected,-1),false);$('quickNext').onclick=()=>showQuickDate(quickDateOffset(settings.selected,1),false);
-$('quickDayEvents').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(b){hideQuickDate(false);detail(b.dataset.id)}});
+let quickSwipeStart=null,quickSwipeSuppressClick=false;
+$('quickDayEvents').addEventListener('touchstart',e=>{
+ quickSwipeSuppressClick=false;if(e.touches.length===1)quickSwipeStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
+},{passive:true});
+$('quickDayEvents').addEventListener('touchend',e=>{
+ if(!quickSwipeStart||!e.changedTouches.length)return;
+ const dx=e.changedTouches[0].clientX-quickSwipeStart.x;
+ const dy=e.changedTouches[0].clientY-quickSwipeStart.y;
+ quickSwipeStart=null;
+ if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.35){
+   quickSwipeSuppressClick=true;
+   showQuickDate(quickDateOffset(settings.selected,dx<0?1:-1),false);
+ }
+},{passive:true});
+$('quickDayEvents').addEventListener('touchcancel',()=>{quickSwipeStart=null},{passive:true});
+$('quickDayEvents').addEventListener('click',e=>{
+ if(quickSwipeSuppressClick){quickSwipeSuppressClick=false;e.preventDefault();return}
+ const b=e.target.closest('[data-id]');
+ if(b){hideQuickDate(false);detail(b.dataset.id)}
+});
+$('dateQuickView').addEventListener('keydown',e=>{
+ if(['ArrowLeft','ArrowRight'].includes(e.key)&&!e.target.matches('input,textarea,select')){
+    e.preventDefault();showQuickDate(quickDateOffset(settings.selected,e.key==='ArrowLeft'?-1:1),false)
+ }
+});
  for(const id of ['selectedEvents','jobList','detailContent'])$(id).addEventListener('click',e=>{const star=e.target.closest('[data-star]');if(star){toggleSaved(star.dataset.star);return}const b=e.target.closest('[data-id]');if(b){detail(b.dataset.id);return}const apply=e.target.closest('[data-apply]');if(apply){const x=merged.find(j=>j.id===apply.dataset.apply);if(x){if(isApplied(x))detail(x.id);else{persistRecord(x,'지원완료',dayNow(),getRecord(x)?.note||'');toast('지원완료로 기록했어요')}}return}const recordSave=e.target.closest('[data-record-save]');if(recordSave){const x=merged.find(j=>j.id===recordSave.dataset.recordSave);if(x){persistRecord(x,getRecord(x)?.status||'미지원',$('applicationDate')?.value||'',$('applicationNote')?.value||'');detail(x.id);toast('지원일과 메모를 저장했어요')}return}const s=e.target.closest('[data-status]');if(s){const x=merged.find(j=>j.id===s.dataset.job);if(x){const rec=getRecord(x);const dt=$('applicationDate')?.value||rec?.applied_date||(APPLIED_STATES.includes(s.dataset.status)?dayNow():'');persistRecord(x,s.dataset.status,dt,$('applicationNote')?.value||rec?.note||'');detail(x.id);toast('지원 상태를 저장했어요')}return}const del=e.target.closest('[data-delete]');if(del){if(confirm('이 공고를 내 기록에서 삭제할까요?')){personal=personal.filter(x=>x.id!==del.dataset.delete);save('radar_myjobs',personal);$('detailOverlay').hidden=true;rebuild()}}});
  $('jobList').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-id]'))detail(e.target.dataset.id)});
  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>{$(b.dataset.close==='detail'?'detailOverlay':'formOverlay').hidden=true});document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('dateQuickView').hidden)hideQuickDate();$('detailOverlay').hidden=true;$('formOverlay').hidden=true}});
