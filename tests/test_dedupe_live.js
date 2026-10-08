@@ -42,6 +42,16 @@ const changed=context._dedupe([sameLinkOld,sameLinkNew]);
 assert.equal(changed.length,1,'same source URL must merge even if deadlines conflict');
 assert.equal(changed[0].end_date,'2026-10-13','confirmed midnight deadline must win');
 assert.equal(changed[0].end_datetime,'2026-10-14T00:00+09:00','precise source deadline must be retained');
+const midnightJaso={...example,id:'jso-midnight',source:'jasoseol',
+  end_date:'2026-10-13',end_datetime:'2026-10-14T00:00+09:00'};
+const otherJobSite={...example,id:'jk-date-only',source:'jobkorea',
+  url:'https://www.jobkorea.co.kr/Recruit/GI_Read/888899'};
+const cross=context._dedupe([midnightJaso,otherJobSite]);
+assert.equal(cross.length,1,'same cross-site job with midnight/date-only deadline must merge');
+assert.equal(cross[0].end_date,'2026-10-13','midnight adjusted date must win cross-source merge');
+const otherRole={...otherJobSite,id:'jk-other-role',title:'2026 하반기 재무 회계직 공개채용',url:'https://www.jobkorea.co.kr/Recruit/GI_Read/888898'};
+const notSame=context._dedupe([midnightJaso,otherRole]);
+assert.equal(notSame.length,2,'different job titles cannot merge by one-day deadline coincidence');
 const full=context._dedupe(jobData), seenBySourceId=new Map(), conflicts=[];
 for(const g of full){
   for(const l of g.links||[]){
