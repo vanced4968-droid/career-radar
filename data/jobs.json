@@ -1,16 +1,17 @@
 {
   "updated_at": "2026-10-08T23:25:00+09:00",
+  "last_attempt_at": "2026-10-09T02:41:00+09:00",
   "mode": "snapshot",
   "source_status": {
     "jobkorea": {
       "ok": false,
-      "count": 93,
-      "note": "2026-10-08 공개 검색·달력에서 선별해 기록한 표본이며 자동 수집 성공 여부는 미확인"
+      "count": 0,
+      "note": "robots.txt returned HTML; refusing crawl"
     },
     "jasoseol": {
       "ok": false,
-      "count": 27,
-      "note": "2026-10-08 공개 검색·달력에서 선별해 기록한 표본이며 자동 수집 성공 여부는 미확인"
+      "count": 0,
+      "note": "403 Client Error: Forbidden for url: https://jasoseol.com/robots.txt"
     }
   },
   "jobs": [
