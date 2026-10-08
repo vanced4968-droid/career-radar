@@ -1,0 +1,16 @@
+name: Probe public recruitment sources
+on:
+  push:
+    paths:
+      - ".github/workflows/probe.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test unauthenticated public pages
+        run: python scripts/probe_sources.py
