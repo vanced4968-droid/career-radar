@@ -19,6 +19,7 @@ UA = "CareerRadar-PersonalCalendar/1.1 (public jobs metadata, noncommercial)"
 S = requests.Session()
 S.headers.update({"User-Agent":UA, "Accept-Language":"ko-KR,ko;q=0.9",
                   "Accept":"text/html,application/xhtml+xml"})
+SOURCE_DIAGNOSTICS = {}
 KINDS = {"한국서부발전":"공기업","한국남부발전":"공기업","국가철도공단":"공기업",
          "인천공항시설관리":"공기업","LS ELECTRIC":"대기업","현대오토에버":"대기업",
          "CJ대한통운":"대기업","삼천리":"대기업","S-OIL":"대기업",
@@ -232,23 +233,86 @@ def reader_jobkorea(md):
                 results[idx][keys[event]]=stamp
     return list(results.values())
 
+def source_total(md):
+    m=re.search(r"공고\s*([\d,]+)\s*건",md or "")
+    return int(m[1].replace(",","")) if m else None
+
+def target_pages(first, count):
+    """Always revisit newest notices, then rotate older notices across days."""
+    start=int(os.getenv("JASO_DEEP_START","25"))
+    span=max(1,int(os.getenv("JASO_DEEP_SPAN","80")))
+    day_number=NOW.date().toordinal()
+    offset=((day_number*count) % span) if count else 0
+    return [*range(1,first+1),*range(start+offset,start+offset+count)]
+
 def fallback_jobkorea():
-    # Stable public article reader, not a private site endpoint.
-    jobs=reader_jobkorea(public_reader(JK))
-    if len(jobs)<5:raise RuntimeError("JobKorea reader parsed fewer than five records")
+    # Only the PUBLIC recruitment calendar page is supported. The page truncates
+    # days with '더보기 +N', so it cannot be claimed as a complete JobKorea feed.
+    md=public_reader(JK)
+    jobs=reader_jobkorea(md)
+    if len(jobs)<5:
+        raise RuntimeError("JobKorea public calendar parsed fewer than five records")
+    more=[int(x) for x in re.findall(r"더보기\s*\+(\d+)",md)]
+    SOURCE_DIAGNOSTICS["jobkorea"]={
+        "pages_scanned":1,"page_failures":0,"visible_events":len(jobs),
+        "additional_hidden_events_indicated":sum(more),
+        "partial":True,
+        "note":"공채달력 현재 월의 공개된 일부 일정만 수집; 더보기 항목과 일반 채용검색은 미포함"
+    }
     return jobs
 
 def fallback_jasoseol():
     records={}
-    max_pages=max(1,min(int(os.getenv("JASO_PAGES","5")),8))
-    for n in range(1,max_pages+1):
-        if n>1:time.sleep(1.5)
-        url=JS if n==1 else JS+"?page="+str(n)
-        batch=reader_jasoseol(public_reader(url))
-        new=[x for x in batch if x["id"] not in records]
-        if not new:break
-        for item in new: records[item["id"]]=item
-    if len(records)<5:raise RuntimeError("Jasoseol reader parsed fewer than five records")
+    first=max(1,min(int(os.getenv("JASO_PAGES","24")),45))
+    big=max(0,min(int(os.getenv("JASO_BIG_PAGES","12")),30))
+    rotate=max(0,min(int(os.getenv("JASO_ROTATE_PAGES","6")),15))
+    streams=[
+      ("latest",JS,target_pages(first,rotate)),
+    ]
+    if big:
+        streams.append(("large",JS+"?businessTypes=big_business",list(range(1,big+1))))
+    successful_pages=0
+    failed_pages=[]
+    reported_total=None
+    per_stream={}
+    for stream,base,pages in streams:
+        collected=0
+        seen_pages=set()
+        for n in pages:
+            if n in seen_pages:continue
+            seen_pages.add(n)
+            url=base+("&" if "?" in base else "?")+"page="+str(n)
+            try:
+                md=public_reader(url)
+                if stream=="latest" and n==1:
+                    reported_total=source_total(md)
+                batch=reader_jasoseol(md)
+                if not batch:raise RuntimeError("page had no parseable job links")
+                successful_pages+=1
+                for job in batch:
+                    if job["id"] not in records:
+                        collected+=1
+                    records[job["id"]]=job
+            except Exception as ex:
+                failed_pages.append(stream+":"+str(n))
+                print("PAGE_FAILED",stream,n,str(ex)[:130],flush=True)
+                # No point scanning thousands of old pages during global blocking,
+                # but preserve records already collected in this run.
+                if len(failed_pages)>=8 and successful_pages==0:
+                    break
+            time.sleep(1.25)
+        per_stream[stream]=collected
+    SOURCE_DIAGNOSTICS["jasoseol"]={
+        "pages_scanned":successful_pages,"page_failures":len(failed_pages),
+        "failed_page_samples":failed_pages[:10],
+        "reported_site_results":reported_total,
+        "stream_counts":per_stream,
+        "partial":True,
+        "note":"공개 채용검색 최신 페이지 + 대기업 + 이전 페이지 순환 수집; 자소설 채용달력 전수 접근 아님"
+    }
+    if len(records)<5:
+        raise RuntimeError("Jasoseol pages parsed fewer than five total unique entries")
+    print("JASO_PAGE_AUDIT",json.dumps(SOURCE_DIAGNOSTICS["jasoseol"],ensure_ascii=False),flush=True)
     return list(records.values())
 
 def source_with_fallback(source, original):
@@ -273,10 +337,10 @@ def main():
             results=method()
             if len(results)<2:raise RuntimeError("fewer than 2 parsed entries; possible page change")
             incoming.extend(results)
-            status[source]={"ok":True,"count":len(results),"note":"공개 화면 일부; 전체 공고 보장 불가"}
+            status[source]={"ok":True,"count":len(results),"note":"공개 페이지 일부 수집, 전체 공고 보장 불가",**SOURCE_DIAGNOSTICS.get(source,{})}
             print("OK",source,len(results),flush=True)
         except Exception as error:
-            status[source]={"ok":False,"count":0,"note":str(error)[:210]}
+            status[source]={"ok":False,"count":0,"note":str(error)[:210],**SOURCE_DIAGNOSTICS.get(source,{})}
             print("FAILED",source,repr(error),file=sys.stderr,flush=True)
         time.sleep(1)
     jobs={}
