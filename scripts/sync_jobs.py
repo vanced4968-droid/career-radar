@@ -238,12 +238,18 @@ def source_total(md):
     return int(m[1].replace(",","")) if m else None
 
 def target_pages(first, count):
-    """Always revisit newest notices, then rotate older notices across days."""
-    start=int(os.getenv("JASO_DEEP_START","25"))
-    span=max(1,int(os.getenv("JASO_DEEP_SPAN","80")))
+    """Newest pages every run; rotate 300 older pages between midnight and backup runs.
+
+    Two daily runs use complementary page windows. As public search pagination changes,
+    this remains a best-effort rolling archive rather than an exhaustive export.
+    """
+    start=max(first+1,int(os.getenv("JASO_DEEP_START","25")))
+    span=max(1,min(int(os.getenv("JASO_DEEP_SPAN","300")),500))
     day_number=NOW.date().toordinal()
-    offset=((day_number*count) % span) if count else 0
-    return [*range(1,first+1),*range(start+offset,start+offset+count)]
+    slot=1 if NOW.hour>=0 and NOW.minute>=25 else 0
+    offset=((day_number*count*2+slot*count) % span) if count else 0
+    older=[start+((offset+i)%span) for i in range(count)]
+    return [*range(1,first+1),*older]
 
 def fallback_jobkorea():
     # Only the PUBLIC recruitment calendar page is supported. The page truncates
