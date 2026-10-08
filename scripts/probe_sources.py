@@ -17,6 +17,8 @@ def check(pair):
         req=Request(u,headers={"User-Agent":"CareerRadar-PersonalCalendar/1.1","Accept":"text/html,text/plain,application/rss+xml"})
         with urlopen(req,timeout=18) as f:
             data=f.read(100000).decode("utf-8","replace")
+            if k in ('jina_jobkorea','jina_jasoseol'):
+                print('SAMPLE_BEGIN',k,'\n',data[:12500],'\nSAMPLE_END',k,flush=True)
             return k,f.status,round(time.monotonic()-t,1),len(data),data[:120].replace("\n"," "),sum(x in data for x in ("공채","채용","recruit","jobs","RSS"))
     except Exception as e:
         return k,"FAILED",0,0,str(e)[:150],0
