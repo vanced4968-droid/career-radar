@@ -46,6 +46,47 @@
 @media(max-width:390px){
   .day-event-row .pill{display:none;}
 }
+/* One-tap date inspector. It never changes a company until the user taps a row. */
+.date-quickview{position:fixed;inset:0;z-index:110;display:flex;align-items:stretch;justify-content:flex-end}
+.quick-backdrop{position:absolute;inset:0;background:rgba(14,26,46,.41);backdrop-filter:blur(2px)}
+.quick-panel{position:relative;display:flex;flex-direction:column;overflow:hidden;min-height:0;margin:16px;width:min(450px,calc(100% - 32px));max-height:calc(100dvh - 32px);background:white;border-radius:19px;box-shadow:0 20px 65px rgba(12,27,54,.27)}
+.quick-handle{display:none}
+.quick-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:23px 22px 15px;border-bottom:1px solid #e9eef5}
+.quick-heading{min-width:0}
+.quick-kicker{display:block;font-size:11px;font-weight:800;color:#507ac7;margin-bottom:7px}
+.quick-heading h2{font-size:21px;line-height:1.3;margin:0;color:#172a49;letter-spacing:-.5px}
+.quick-heading p{font-size:12px;color:#8291a9;margin:8px 0 0}
+.quick-dismiss{flex:none;border:0;border-radius:11px;width:36px;height:36px;background:#eff3f8;color:#62738d;font-size:23px;line-height:1}
+.quick-day-nav{display:flex;justify-content:space-between;padding:12px 20px;background:#f9fbff;gap:10px}
+.quick-nav-button{border:1px solid #dfe7f2;border-radius:9px;background:white;padding:9px 14px;color:#46638c;font-size:12px;font-weight:800;min-height:36px}
+.quick-nav-button:active{background:#e7f0ff}
+.quick-list{overflow-y:auto;min-height:0;flex:1;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:9px 14px 18px}
+.quick-item{display:flex;align-items:center;gap:12px;text-align:left;width:100%;padding:15px 9px;background:#fff;border:0;border-bottom:1px solid #edf0f6;color:#1c2e4a;min-height:76px}
+.quick-item:hover,.quick-item:focus-visible{background:#f5f8ff}
+.quick-item-main{display:flex;flex:1;flex-direction:column;min-width:0;gap:5px}
+.quick-item-main strong{display:block;font-size:14px;line-height:1.4;overflow-wrap:anywhere}
+.quick-item-main small{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;color:#8190a6;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.quick-type{flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:38px;padding:6px 8px;border-radius:8px;font-size:11px;line-height:1.25;font-weight:800}
+.quick-type.close{background:#fff0f2;color:#cf4357}
+.quick-type.start{background:#eaf3ff;color:#2769d0}
+.quick-type.result{background:#e7fbf3;color:#15936f}
+.quick-type.test{background:#f4ecff;color:#8658c5}
+.quick-arrow{color:#9ba8bb;font-size:23px;font-weight:300}
+.quick-empty{padding:50px 20px;text-align:center;color:#94a1b5;line-height:1.7;font-size:13px}
+.quick-empty strong{color:#4a6080;display:block;margin-bottom:6px;font-size:14px}
+.quick-footer{flex:none;border-top:1px solid #edf0f6;text-align:center;color:#94a1b5;font-size:10px;padding:12px 14px;background:#fafcff}
+@media(max-width:730px){
+  .date-quickview{align-items:flex-end;justify-content:center}
+  .quick-panel{width:100%;max-height:min(80dvh,720px);margin:0;border-radius:22px 22px 0 0;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -8px 40px #1525413d}
+  .quick-handle{display:block;align-self:center;flex:none;width:42px;height:5px;border-radius:4px;background:#d8e0ed;margin-top:10px}
+  .quick-header{padding:14px 18px 13px}
+  .quick-heading h2{font-size:20px}
+  .quick-day-nav{padding:10px 16px}
+  .quick-list{padding:6px 12px 14px}
+  .quick-item{min-height:73px}
+  .quick-footer{padding:10px 12px}
+}
+@media(prefers-reduced-motion:reduce){.quick-panel{scroll-behavior:auto}}
 </style>
 </head>
 <body>
@@ -97,6 +138,22 @@
   </section>
   <footer>CAREER RADAR · PRIVATE WORKSPACE <span>Made for focused job hunting</span></footer>
  </main>
+</div>
+<div class="date-quickview" id="dateQuickView" hidden>
+ <div class="quick-backdrop" data-quick-close></div>
+ <section class="quick-panel" role="dialog" aria-modal="true" aria-labelledby="quickDateTitle">
+  <div class="quick-handle" aria-hidden="true"></div>
+  <header class="quick-header">
+   <div class="quick-heading"><span class="quick-kicker">선택한 날짜의 채용 일정</span><h2 id="quickDateTitle">날짜별 기업 목록</h2><p id="quickDateCount">일정 불러오는 중</p></div>
+   <button class="quick-dismiss" id="quickClose" type="button" aria-label="날짜별 일정 닫기">×</button>
+  </header>
+  <div class="quick-day-nav">
+   <button id="quickPrev" class="quick-nav-button" type="button" aria-label="전날 일정 보기">← 전날</button>
+   <button id="quickNext" class="quick-nav-button" type="button" aria-label="다음날 일정 보기">다음날 →</button>
+  </div>
+  <div class="quick-list" id="quickDayEvents" aria-live="polite"></div>
+  <div class="quick-footer">기업을 누르면 공고 상세정보가 열려요 · 현재 선택한 필터 적용</div>
+ </section>
 </div>
 <div class="overlay" id="detailOverlay" hidden><div class="backdrop" data-close="detail"></div><section class="drawer" role="dialog" aria-modal="true" aria-label="채용공고 상세"><button class="dialog-close" data-close="detail" aria-label="닫기">×</button><div id="detailContent"></div></section></div>
 <div class="overlay" id="formOverlay" hidden><div class="backdrop" data-close="form"></div><section class="modal" role="dialog" aria-modal="true" aria-label="공고 직접 추가"><div class="modal-head"><h2>공고 직접 추가</h2><button class="dialog-close" data-close="form">×</button></div><p class="muted">기존 목록에 없는 공고나 발표일을 직접 기록할 수 있어요.</p><form id="jobForm"><label>기업명 <input name="company" required placeholder="예: HD현대일렉트릭"></label><label>공고명 <input name="title" required placeholder="예: 2026 하반기 신입공채"></label><div class="form-grid"><label>기업 종류 <select name="company_type"><option>대기업</option><option>중견기업</option><option>공기업</option><option>기타</option></select></label><label>관련 분야 <select name="field"><option value="electrical">전기·설비·에너지</option><option value="battery">이차전지</option><option value="manufacturing">생산·설계</option><option value="other">기타</option></select></label></div><div class="form-grid"><label>접수 시작 <input type="date" name="start_date"></label><label>접수 마감 <input type="date" name="end_date"></label></div><div class="form-grid"><label>서류 발표 예정 <input type="date" name="result_date"></label><label>인적성 일정 <input type="date" name="test_date"></label></div><label>원본 링크 <input name="url" type="url" placeholder="https://..."></label><label>메모 <textarea name="note" rows="2" placeholder="지원 직무, 지역, 기타 메모"></textarea></label><div class="modal-actions"><button class="btn outline" type="button" data-close="form">취소</button><button class="btn primary" type="submit">공고 저장하기</button></div></form></section></div>
@@ -203,6 +260,12 @@ function setFilterUI(){document.querySelectorAll('#fieldFilters input').forEach(
 function renderCalendar(){const [yy,mm]=(settings.month||dayNow().slice(0,7)).split('-').map(Number);$('monthTitle').textContent=`${yy}년 ${mm}월`;const first=new Date(yy,mm-1,1).getDay(),total=new Date(yy,mm,0).getDate();const chosen=settings.selected||dayNow();const evs=eventsFor(visible());const map=new Map();for(const e of evs){if(!map.has(e.date))map.set(e.date,[]);map.get(e.date).push(e)}let html=['일','월','화','수','목','금','토'].map(d=>`<div class="weekday">${d}</div>`).join('');const cells=Math.ceil((first+total)/7)*7;
  for(let i=0;i<cells;i++){const n=i-first+1,inMonth=n>0&&n<=total;const dt=inMonth?`${yy}-${String(mm).padStart(2,'0')}-${String(n).padStart(2,'0')}`:'';const dayEvents=map.get(dt)||[];html+=`<div class="day ${inMonth?'':'other'} ${dt===chosen?'chosen':''} ${dt===dayNow()?'today':''}" data-date="${dt}" ${inMonth?`tabindex="0" role="button" aria-label="${dt} 일정 ${dayEvents.length}개, 날짜 선택"`:''}><div class="num">${inMonth?n:''}</div>${dayEvents.slice(0,(window.innerWidth<=730?2:3)).map(e=>`<div class="day-event ${e.type}" style="--event:${eventColor(e.type)}" title="${esc(e.job.company)} · ${EVENT_NAMES[e.type]}"><small>${EVENT_NAMES[e.type]}</small><span class="event-company">${esc(e.job.company)}</span></div>`).join('')}${dayEvents.length>(window.innerWidth<=730?2:3)?`<span class="more">+${dayEvents.length-(window.innerWidth<=730?2:3)}개 더보기</span>`:''}</div>`}
  $('calendarGrid').innerHTML=html;renderSelected(map);}
+function quickDateOffset(dt,step){const parts=dt.split('-').map(Number);const d=new Date(parts[0],parts[1]-1,parts[2]+step,12);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function showQuickDate(dt,moveFocus){if(!dateOnly(dt))return;settings.selected=dt;settings.month=dt.slice(0,7);render();const order={close:0,start:1,result:2,test:3};const evs=eventsFor(visible()).filter(e=>e.date===dt).sort((a,b)=>(order[a.type]??9)-(order[b.type]??9)||a.job.company.localeCompare(b.job.company,'ko'));
+const d=new Date(dt+'T12:00:00');const weekday=d.toLocaleDateString('ko-KR',{weekday:'short'});$('quickDateTitle').textContent=md(dt)+' ('+weekday+')';$('quickDateCount').textContent=evs.length+'개 일정 · '+new Set(evs.map(e=>e.job.id)).size+'개 공고';
+$('quickDayEvents').innerHTML=evs.length?evs.map(e=>'<button class="quick-item" type="button" data-id="'+esc(e.job.id)+'"><span class="quick-type '+e.type+'">'+EVENT_NAMES[e.type]+'</span><span class="quick-item-main"><strong>'+esc(e.job.company)+'</strong><small>'+esc(e.job.title)+'</small></span><span class="quick-arrow" aria-hidden="true">›</span></button>').join(''):'<div class="quick-empty"><strong>이 날짜에 표시할 일정이 없어요.</strong>다른 날짜를 선택하거나 필터를 확인해 주세요.</div>';
+$('quickDayEvents').scrollTop=0;$('dateQuickView').hidden=false;document.body.style.overflow='hidden';if(moveFocus!==false)$('quickClose').focus({preventScroll:true})}
+function hideQuickDate(restoreFocus){$('dateQuickView').hidden=true;document.body.style.overflow='';if(restoreFocus!==false){const cell=Array.from(document.querySelectorAll('#calendarGrid .day[data-date]')).find(x=>x.dataset.date===settings.selected);if(cell)cell.focus({preventScroll:true})}}
 function eventColor(t){return {start:'#2f83eb',close:'#f06777',result:'#21ac88',test:'#a46af3'}[t]||'#556'}
 function renderSelected(map){const dt=settings.selected||dayNow();$('selectedDateTitle').textContent=md(dt)+' 일정';const evs=map.get(dt)||[];$('selectedEvents').innerHTML=evs.length?evs.map(e=>`<div class="day-event-row"><span class="event-type ${e.type}">${EVENT_NAMES[e.type]}</span><button data-id="${esc(e.job.id)}"><strong>${esc(e.job.company)}</strong><small>${esc(e.job.title)}</small></button><span class="pill">${esc(e.job.company_type)}</span></div>`).join(''):'<div class="empty" style="padding:18px">선택한 조건에 해당하는 일정이 없어요.</div>'}
 function renderList(){const list=visible();const sort=$('sortFilter').value;list.sort((a,b)=>sort==='company'?a.company.localeCompare(b.company,'ko'):sort==='recent'?(b.start_date||'').localeCompare(a.start_date||''):(a.end_date||'9999').localeCompare(b.end_date||'9999'));$('countText').textContent=`필터 적용 ${list.length}건 · 같은 공고는 한 번만 표시`;const sourceTag=(s)=>`<span class="pill source-${s}">${s==='jobkorea'?'잡코리아':s==='jasoseol'?'자소설닷컴':'직접추가'}</span>`;
@@ -219,11 +282,14 @@ function allEventsSetup(){document.querySelectorAll('#fieldFilters input').forEa
  $('clearFilters').onclick=()=>{settings={...settings,fields:[],types:[],source:'all',openOnly:false,search:'',events:['start','close','result','test']};setFilterUI();render();toast('모든 공고가 표시되도록 필터를 초기화했어요')};
  $('prevMonth').onclick=()=>shiftMonth(-1);$('nextMonth').onclick=()=>shiftMonth(1);$('goToday').onclick=()=>{settings.month=dayNow().slice(0,7);settings.selected=dayNow();render()};
  $('monthView').onclick=()=>{settings.view='calendar';render()};$('listView').onclick=()=>{settings.view='list';render()};document.querySelectorAll('.nav[data-view]').forEach(b=>b.onclick=()=>{settings.view=b.dataset.view;render()});$('exportBtn').onclick=exportData;
- $('calendarGrid').addEventListener('click',e=>{const day=e.target.closest('.day[data-date]');if(day&&day.dataset.date){settings.selected=day.dataset.date;render()}});
- $('calendarGrid').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('.day[data-date]')){e.preventDefault();settings.selected=e.target.dataset.date;render()}});
+ $('calendarGrid').addEventListener('click',e=>{const day=e.target.closest('.day[data-date]');if(day&&day.dataset.date)showQuickDate(day.dataset.date)});
+ $('calendarGrid').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('.day[data-date]')){e.preventDefault();showQuickDate(e.target.dataset.date)}});
+ $('quickClose').onclick=()=>hideQuickDate();document.querySelector('#dateQuickView [data-quick-close]').onclick=()=>hideQuickDate();
+$('quickPrev').onclick=()=>showQuickDate(quickDateOffset(settings.selected,-1),false);$('quickNext').onclick=()=>showQuickDate(quickDateOffset(settings.selected,1),false);
+$('quickDayEvents').addEventListener('click',e=>{const b=e.target.closest('[data-id]');if(b){hideQuickDate(false);detail(b.dataset.id)}});
  for(const id of ['selectedEvents','jobList','detailContent'])$(id).addEventListener('click',e=>{const star=e.target.closest('[data-star]');if(star){toggleSaved(star.dataset.star);return}const b=e.target.closest('[data-id]');if(b){detail(b.dataset.id);return}const s=e.target.closest('[data-status]');if(s){statuses[s.dataset.job]=s.dataset.status;save('radar_status',statuses);detail(s.dataset.job);return}const del=e.target.closest('[data-delete]');if(del){if(confirm('이 공고를 내 기록에서 삭제할까요?')){personal=personal.filter(x=>x.id!==del.dataset.delete);save('radar_myjobs',personal);$('detailOverlay').hidden=true;rebuild()}}});
  $('jobList').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('[data-id]'))detail(e.target.dataset.id)});
- document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>{$(b.dataset.close==='detail'?'detailOverlay':'formOverlay').hidden=true});document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('detailOverlay').hidden=true;$('formOverlay').hidden=true}});
+ document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>{$(b.dataset.close==='detail'?'detailOverlay':'formOverlay').hidden=true});document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('dateQuickView').hidden)hideQuickDate();$('detailOverlay').hidden=true;$('formOverlay').hidden=true}});
  $('addBtn').onclick=()=>{$('formOverlay').hidden=false};$('jobForm').onsubmit=e=>{e.preventDefault();const o=Object.fromEntries(new FormData(e.target).entries());personal.push({...o,id:'manual-'+Date.now(),source:'manual',positions:o.note||'',source_detail:'내가 직접 등록한 일정',verified:dayNow()});save('radar_myjobs',personal);$('formOverlay').hidden=true;e.target.reset();rebuild();toast('새 공고를 추가했어요')};
  $('importBtn').onclick=()=>$('importFile').click();$('importFile').onchange=async e=>{const file=e.target.files?.[0];if(!file)return;try{const txt=await file.text(),obj=JSON.parse(txt);if(obj?.version===1&&Array.isArray(obj.manual_jobs)){personal=obj.manual_jobs;saved=obj.saved||saved;statuses=obj.statuses||statuses;save('radar_saved',saved);save('radar_status',statuses)}else{personal=[...personal,...parseImport(file.name,txt)]}save('radar_myjobs',personal);rebuild();toast('데이터를 가져왔어요')}catch(err){try{if(/\.csv$/i.test(file.name)){personal=[...personal,...parseImport(file.name,await file.text())];save('radar_myjobs',personal);rebuild();toast('CSV 공고를 추가했어요')}else throw err}catch(e){toast('가져오기 실패: '+e.message)}}e.target.value=''};
 }
