@@ -172,6 +172,8 @@
  .selected-day-info p{font-size:10px;}
  .selected-day-nav{min-width:67px;min-height:38px;padding:8px 7px;font-size:11px;border-radius:8px;}
 }
+.coverage-tip{font-size:11px;line-height:1.5;color:#72829a;background:#f1f6ff;border-left:3px solid #9bbced;padding:9px 12px;border-radius:4px;margin:-9px 0 16px}
+@media(max-width:730px){.coverage-tip{margin:-9px 0 12px;font-size:10px;padding:8px 9px}.toolbar-actions{gap:5px;justify-content:flex-start!important;flex-wrap:wrap}.toolbar-actions .btn{padding:8px 9px;font-size:10px}}
 </style>
 </head>
 <body>
@@ -194,8 +196,9 @@
   <header class="topbar"><div class="topbar-kicker">RECRUITMENT INTELLIGENCE <span class="kicker-dot">●</span> 개인용</div><div class="top-actions"><span class="date-now" id="todayLabel"></span><button class="btn ghost small" id="exportBtn">내 데이터 내보내기 ↓</button></div></header>
   <section class="headline"><div><div class="eyebrow">두 사이트의 채용정보를, 한곳에서.</div><h1>나의 채용 레이더 <span class="wave">✳</span></h1><p>잡코리아 + 자소설닷컴 통합 · 중복 공고 정리 · 전기공학 맞춤 탐색</p></div><button class="btn primary" id="addBtn"><span>＋</span> 공고 추가하기</button></section>
   <p id="refreshStatus" role="status" style="font-size:12px;color:#647590;line-height:1.55;margin:-13px 0 18px 3px">매일 00:00(한국시간) 자동 갱신 시도 · 데이터 확인 중</p>
+  <p class="coverage-tip" id="coverageTip">수집 범위 확인 중 · 달력에 표시할 날짜가 없는 공고는 「전체 공고 보기」에서 확인할 수 있어요.</p>
   <section class="stats"><div class="stat"><span>통합 공고</span><div><strong id="statTotal">—</strong><em>건</em></div><small>중복 통합 후</small></div><div class="stat"><span>지금 접수 중</span><div><strong id="statActive">—</strong><em>건</em></div><small>확인된 접수 기간 기준</small></div><div class="stat"><span>7일 이내 마감</span><div><strong id="statSoon">—</strong><em>건</em></div><small>마감 일정이 있는 공고</small></div><div class="stat"><span>내 지원 기록</span><div><strong id="statApplied">—</strong><em>건</em></div><small>지원 상태와 메모 저장</small></div></section>
-  <section class="toolbar"><div class="searchbox"><span>⌕</span><input id="search" type="search" placeholder="기업명, 직무, 공고명 검색 (예: 전기, HD현대)" autocomplete="off"></div><div class="toolbar-actions"><button id="clearFilters" class="btn ghost small">필터 초기화 ↺</button><button id="importBtn" class="btn outline small">↑ 공고 가져오기</button><input type="file" id="importFile" accept=".json,.csv,text/csv,application/json" hidden></div></section>
+  <section class="toolbar"><div class="searchbox"><span>⌕</span><input id="search" type="search" placeholder="기업명, 직무, 공고명 검색 (예: 전기, HD현대)" autocomplete="off"></div><div class="toolbar-actions"><button id="showAllJobs" class="btn outline small" title="필터를 해제하고 날짜 미정 공고까지 목록으로 표시합니다">전체 공고 보기</button><button id="clearFilters" class="btn ghost small">필터 초기화 ↺</button><button id="importBtn" class="btn outline small">↑ 공고 가져오기</button><input type="file" id="importFile" accept=".json,.csv,text/csv,application/json" hidden></div></section>
   <section class="filters" aria-label="채용공고 필터">
    <div class="filter-section"><div class="filter-header"><strong>전공·직무</strong><span>다중 선택 · 선택 없으면 전체</span></div>
     <div id="fieldFilters" class="filter-options">
@@ -266,7 +269,7 @@ const EVENT_NAMES={start:'시작',close:'마감',result:'발표',test:'인적성
 const EVENT_KEYS={start:'start_date',close:'end_date',result:'result_date',test:'test_date'};
 const aliases={'디엔솔루션즈':'dn솔루션즈','dn솔루션즈':'dn솔루션즈','엘에스일렉트릭':'ls electric','ls일렉트릭':'ls electric','ls electric':'ls electric','비에이치아이':'bhi','bhi':'bhi','에스케이핀크스':'sk핀크스','씨제이대한통운':'cj대한통운'};
 const words={electrical:/전기|전력|발전|송배전|변전|전력계통|전기설비|유틸리티|배전|수배전|전기안전|태양광|풍력|ESS|electrical|power system|PLC|전장/i,battery:/배터리|이차전지|2차전지|셀\b|전지|BMS|ESS|양극|음극|전해질|전고체|에너지|battery/i,manufacturing:/생산|제조|기계|공정|설계|제어|자동화|품질|산업안전|설비|공무|R&D|연구개발|양산|pilot|파이롯트|현장기술|엔지니어|테스트/i,it:/IT|개발|프로그래밍|SW|AI|데이터|클라우드|시스템|보안|IT인프라|컴퓨터|백엔드|프론트엔드|디지털|AX/i,business:/영업|사무|기획|인사|재무|회계|경영|마케팅|마케터|디자인|지원|행정|MD|컨설턴트|법무|관리|간호|보건/i};
-const defaults={fields:['electrical','battery','manufacturing','unclassified'],types:[],source:'all',showEnded:true,openOnly:false,search:'',view:'calendar',events:['start','close','result','test'],month:'',selected:''};
+const defaults={fields:[],types:[],source:'all',showEnded:true,openOnly:false,search:'',view:'calendar',events:['start','close','result','test'],month:'',selected:''};
 function read(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}}
 function save(key,value){try{localStorage.setItem(key,JSON.stringify(value))}catch{}}
 let settings={...defaults,...read('radar_settings',{})};
@@ -348,13 +351,21 @@ function updateHealth(){
  const sources=Object.keys(names), failed=sources.filter(s=>!info[s]?.ok);
  const attempted=!!baseData.last_attempt_at;
  const snapshot=baseData.mode==='snapshot';
- $('syncState').textContent=snapshot?(attempted?'자동 수집 실패 · 이전 자료 유지':'초기 자료 · 자동갱신 전'):failed.length?'일부 출처 갱신 실패':'최근 공개자료 수집 완료';
+ $('syncState').textContent=snapshot?(attempted?'자동 수집 실패 · 이전 자료 유지':'초기 자료 · 자동갱신 전'):failed.length?'일부 출처 수집 실패':'공개 페이지 일부 수집 성공';
  $('healthDot').className='pulse '+(snapshot?(attempted?'fail':''):failed.length?'fail':'ok');
  const when=baseData.updated_at?new Date(baseData.updated_at).toLocaleString('ko-KR'):'업데이트 시각 없음';
  $('updatedAt').textContent='자료 기준: '+when;
  $('refreshStatus').textContent='매일 00:00(한국시간) 갱신 시도 · '+(snapshot?(attempted?'최신 공고 수집 실패, 이전 자료를 표시 중':'초기 표본 자료 표시 중'):failed.length?'일부 사이트 자료 수집 실패':'최근 데이터 수집 성공')+' · 자료 기준 '+when;
  const label=s=>snapshot?(attempted?'수집 실패':'초기 표본'):info[s]?.ok?'수집 성공':'수집 실패';
- $('sourceHealth').textContent=' · '+sources.map(s=>names[s]+': '+label(s)+' '+(info[s]?.count??0)+'건').join(' / ')+(attempted?' · 마지막 수집 시도 '+new Date(baseData.last_attempt_at).toLocaleString('ko-KR'):' · 최초 자료는 일부만 수록');
+ const audit=(s)=>{const o=info[s]||{};const pages=o.pages_scanned===undefined?'':(' '+o.pages_scanned+'페이지');const fail=o.page_failures?(' · 실패 '+o.page_failures+'페이지'):'';return names[s]+': '+label(s)+' '+(o.count??0)+'건'+pages+fail;};
+ $('sourceHealth').textContent=' · '+sources.map(audit).join(' / ')+(attempted?' · 마지막 수집 시도 '+new Date(baseData.last_attempt_at).toLocaleString('ko-KR'):' · 최초 자료는 일부만 수록');
+ const raw=(baseData.jobs||[]).length,complete=merged.length;
+ const dated=merged.filter(x=>x.start_date||x.end_date||x.result_date||x.test_date).length;
+ const hidden=visible().length;
+ const jaso=info.jasoseol||{},korea=info.jobkorea||{};
+ const extra=jaso.reported_site_results?(' · 자소설닷컴 공개 검색 전체 '+Number(jaso.reported_site_results).toLocaleString('ko-KR')+'건 중 일부'):''; 
+ $('coverageTip').textContent='저장 원본 '+raw+'건 → 중복 정리 '+complete+'건 · 달력 날짜 있음 '+dated+'건 · 현재 필터 '+hidden+'건'+extra+'. 잡코리아 일반채용 검색과 자소설닷컴 채용달력 전체는 아직 미포함입니다.';
+ 
 }
 function persist(){save('radar_settings',settings)}
 function setFilterUI(){document.querySelectorAll('#fieldFilters input').forEach(el=>{el.checked=settings.fields.includes(el.value)});document.querySelectorAll('#typeFilters input').forEach(el=>{el.checked=settings.types.includes(el.value)});$('sourceFilter').value=settings.source;$('search').value=settings.search;$('showEnded').checked=settings.showEnded!==false;document.querySelectorAll('#eventLegend input').forEach(el=>{el.checked=settings.events.includes(el.value)});}
@@ -404,7 +415,8 @@ function csvRows(s){const rows=[];let row=[],cur='',q=false;for(let i=0;i<s.leng
 function parseImport(name,text){let arr=[];if(/\.csv$/i.test(name)){const rows=csvRows(text);const cols=rows.shift().map(x=>x.trim());arr=rows.map(r=>Object.fromEntries(cols.map((x,i)=>[x,r[i]||''])))}else{const obj=JSON.parse(text);arr=Array.isArray(obj)?obj:obj.jobs;if(!Array.isArray(arr))throw Error('JSON은 공고 배열 또는 jobs 배열이어야 합니다.')}if(arr.length>5000)throw Error('한 번에 5000건 이하만 가져올 수 있어요');return arr.map(x=>cleanJob({...x,source:'manual',id:'manual-'+stableHash((x.company||'')+(x.title||'')+(x.end_date||''))})).filter(j=>j.company&&j.title)}
 function exportData(){const data={version:2,exported_at:new Date().toISOString(),manual_jobs:personal,saved,statuses,applications,settings};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='career-radar-my-data.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);toast('개인 데이터를 내보냈어요')}
 function allEventsSetup(){document.querySelectorAll('#fieldFilters input').forEach(el=>el.addEventListener('change',()=>{settings.fields=Array.from(document.querySelectorAll('#fieldFilters input:checked')).map(x=>x.value);render()}));document.querySelectorAll('#typeFilters input').forEach(el=>el.addEventListener('change',()=>{settings.types=Array.from(document.querySelectorAll('#typeFilters input:checked')).map(x=>x.value);render()}));document.querySelectorAll('#eventLegend input').forEach(el=>el.addEventListener('change',()=>{settings.events=Array.from(document.querySelectorAll('#eventLegend input:checked')).map(x=>x.value);render()}));$('sourceFilter').onchange=e=>{settings.source=e.target.value;render()};$('search').oninput=e=>{settings.search=e.target.value;render()};$('showEnded').onchange=e=>{settings.showEnded=e.target.checked;render()};$('sortFilter').onchange=render;
- $('clearFilters').onclick=()=>{settings={...settings,fields:[],types:[],source:'all',showEnded:true,openOnly:false,search:'',events:['start','close','result','test']};setFilterUI();render();toast('모든 공고가 표시되도록 필터를 초기화했어요')};
+ $('clearFilters').onclick=()=>{settings={...settings,fields:[],types:[],source:'all',showEnded:true,openOnly:false,search:'',events:['start','close','result','test']};setFilterUI();render();updateHealth();toast('모든 공고가 표시되도록 필터를 초기화했어요')};
+ $('showAllJobs').onclick=()=>{settings={...settings,fields:[],types:[],source:'all',showEnded:true,search:'',events:['start','close','result','test'],view:'list'};setFilterUI();render();updateHealth();$('listPanel').scrollIntoView({behavior:'smooth',block:'start'});toast('날짜가 미정인 공고까지 전체 목록에 표시해요')};
  $('prevMonth').onclick=()=>shiftMonth(-1);$('nextMonth').onclick=()=>shiftMonth(1);$('goToday').onclick=()=>{settings.month=dayNow().slice(0,7);settings.selected=dayNow();render()};
  $('monthView').onclick=()=>{settings.view='calendar';render()};$('listView').onclick=()=>{settings.view='list';render()};document.querySelectorAll('.nav[data-view]').forEach(b=>b.onclick=()=>{settings.view=b.dataset.view;render()});$('exportBtn').onclick=exportData;
  $('calendarGrid').addEventListener('click',e=>{const day=e.target.closest('.day[data-date]');if(day&&day.dataset.date)showQuickDate(day.dataset.date)});
