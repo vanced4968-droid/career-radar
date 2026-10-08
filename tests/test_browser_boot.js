@@ -42,8 +42,29 @@ async function main(){
   assert(d.querySelector('#quickDateTitle').textContent===before,'next day control failed');
   d.querySelector('#quickClose').click();
   assert(panel.hidden,'close control did not close quickview');
+
+  const inlinePrevious=d.querySelector('#selectedPrevDay');
+  const inlineNext=d.querySelector('#selectedNextDay');
+  assert(inlinePrevious&&inlineNext,'inline previous/next day controls missing');
+  const beforeInline=d.querySelector('#selectedDateTitle').textContent;
+  assert(beforeInline.includes('2026.10.14'),'unexpected initial inline date '+beforeInline);
+  inlinePrevious.click();
+  assert(d.querySelector('#selectedDateTitle').textContent.includes('2026.10.13'),'inline previous day failed');
+  inlineNext.click();
+  assert(d.querySelector('#selectedDateTitle').textContent===beforeInline,'inline next day failed');
+  assert(panel.hidden,'inline navigation should not open popup');
+  // Navigate through the first day of the month to ensure month and day list stay in sync.
+  d.querySelector('.day[data-date="2026-10-01"]').click();
+  d.querySelector('#quickClose').click();
+  inlinePrevious.click();
+  assert(d.querySelector('#monthTitle').textContent.includes('9월'),'previous across month did not update calendar');
+  assert(d.querySelector('#selectedDateTitle').textContent.includes('2026.09.30'),'previous across month did not update selected date');
+  inlineNext.click();
+  assert(d.querySelector('#monthTitle').textContent.includes('10월'),'next across month did not update calendar');
+  assert(d.querySelector('#selectedDateTitle').textContent.includes('2026.10.01'),'next across month did not update selected date');
+
   assert(!runtimeErrors.length,'runtime exceptions: '+runtimeErrors.join(' | '));
-  console.log('PASS site boot, job count '+count+', calendar, quick day list '+rows.length+', prev/next, close and runtime exception check');
+  console.log('PASS site boot, job count '+count+', calendar, quick day list '+rows.length+', quick prev/next, inline prev/next including month boundaries, close and runtime exception check');
   dom.window.close();
 }
 main().catch(e=>{console.error(e.stack||String(e));process.exit(1)});
