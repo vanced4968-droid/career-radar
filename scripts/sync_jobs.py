@@ -154,16 +154,16 @@ def scan_jasoseol():
 def public_reader(url):
     reader_url = "https://r.jina.ai/" + url
     last_error=None
-    for attempt in range(3):
+    for attempt in range(2):
         try:
-            response = S.get(reader_url, timeout=60,
+            response = S.get(reader_url, timeout=22,
                              headers={"Accept":"text/plain","X-Cache-Tolerance":"1800"})
             response.raise_for_status()
             break
         except requests.RequestException as error:
             last_error=error
-            if attempt==2: raise
-            time.sleep(6*(attempt+1))
+            if attempt==1: raise
+            time.sleep(3*(attempt+1))
     if len(response.content) > 12000000:
         raise RuntimeError("public reader response too large")
     body = response.text
@@ -273,12 +273,18 @@ def fallback_jasoseol():
         streams.append(("large",JS+"?businessTypes=big_business",list(range(1,big+1))))
     successful_pages=0
     failed_pages=[]
+    budget_start=time.monotonic()
+    budget_seconds=max(120,min(int(os.getenv('JASO_SCAN_BUDGET','660')),840))
     reported_total=None
     per_stream={}
     for stream,base,pages in streams:
         collected=0
         seen_pages=set()
         for n in pages:
+            if time.monotonic()-budget_start>budget_seconds:
+                failed_pages.append(stream+':budget_limit')
+                print('JASO_BUDGET_REACHED',stream,n,flush=True)
+                break
             if n in seen_pages:continue
             seen_pages.add(n)
             url=base+("&" if "?" in base else "?")+"page="+str(n)
@@ -332,7 +338,7 @@ def main():
     incoming=[]
     for source,url,method in [
         ("jobkorea",JK,lambda:source_with_fallback("jobkorea",lambda:jobkorea(get(JK)))),
-        ("jasoseol",JS,lambda:source_with_fallback("jasoseol",scan_jasoseol))]:
+        ("jasoseol",JS,fallback_jasoseol)]:
         try:
             results=method()
             if len(results)<2:raise RuntimeError("fewer than 2 parsed entries; possible page change")
