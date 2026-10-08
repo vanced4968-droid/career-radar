@@ -32,4 +32,27 @@ Markdown Content:
         self.assertEqual(out[1]["company_type"],"중견기업")
         self.assertEqual(out[1]["url"],"https://jasoseol.com/recruit/106642")
 
+
+    def test_explicit_midnight_deadline_is_previous_day(self):
+        period="26/10/08 - 26/10/22 (14일) 2026년 10월 8일 09:00 ~ 2026년 10월 22일 00:00"
+        html='[![Image](https://a.test/logo) ##### 테스트전력 #### 발전설비 신입 채용 '+period+' ](https://jasoseol.com/recruit/993001)'
+        result=m.reader_jasoseol(html)
+        self.assertEqual(len(result),1)
+        self.assertEqual(result[0]["start_date"],"2026-10-08")
+        self.assertEqual(result[0]["end_date"],"2026-10-21")
+        self.assertEqual(result[0]["end_datetime"],"2026-10-22T00:00+09:00")
+
+    def test_non_midnight_and_date_only_deadlines_do_not_shift(self):
+        t="26/10/08 - 26/10/22 (14일) 2026년 10월 8일 09:00 ~ 2026년 10월 22일 00:01"
+        a=m.reader_jasoseol('[##### 개발연구소 #### 전기설비 신규 채용 '+t+' ](https://jasoseol.com/recruit/993002)')[0]
+        self.assertEqual(a["end_date"],"2026-10-22")
+        self.assertEqual(a["end_datetime"],"2026-10-22T00:01+09:00")
+        b=m.reader_jasoseol('[##### 기술기업 #### 생산기술 경력 채용 26/10/08 - 26/10/22 ](https://jasoseol.com/recruit/993003)')[0]
+        self.assertEqual(b["end_date"],"2026-10-22")
+        self.assertEqual(b["end_datetime"],"")
+
+    def test_midnight_first_day_of_month_year(self):
+        self.assertEqual(m.parse_deadline_timestamp("2026년 1월 1일 08:00 ~ 2026년 1월 1일 00:00","2026-01-01"),
+                         ("2025-12-31","2026-01-01T00:00+09:00"))
+
 if __name__=="__main__":unittest.main()
