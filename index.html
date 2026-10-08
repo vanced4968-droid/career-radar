@@ -409,8 +409,23 @@ function startDeadlineLabel(e,compact){
  return (compact?'D-':'마감 D-')+left;
 }
 function addStartCountdown(e){const label=startDeadlineLabel(e,false);return label?'<span class="quick-countdown">'+esc(label)+'</span>':'';}
+function groupedCalendarPreview(events){
+ // A narrow date cell summarizes repeated postings by one company and event type.
+ // Distinct positions remain separate, with full titles in the date inspector.
+ const map=new Map();
+ for(const e of events){
+  const key=normCompany(e.job.company)+'|'+e.type+'|'+(e.type==='start'?(e.job.end_date||''):'');
+  if(!map.has(key))map.set(key,{...e,count:1,applied:isApplied(e.job),archived:!!e.job.end_date&&e.job.end_date<dayNow()});
+  else{
+   const old=map.get(key);old.count++;
+   old.applied=old.applied||isApplied(e.job);
+   old.archived=old.archived&&!!e.job.end_date&&e.job.end_date<dayNow();
+  }
+ }
+ return [...map.values()];
+}
 function renderCalendar(){const [yy,mm]=(settings.month||dayNow().slice(0,7)).split('-').map(Number);$('monthTitle').textContent=`${yy}년 ${mm}월`;const first=new Date(yy,mm-1,1).getDay(),total=new Date(yy,mm,0).getDate();const chosen=settings.selected||dayNow();const evs=eventsFor(visible());const map=new Map();for(const e of evs){if(!map.has(e.date))map.set(e.date,[]);map.get(e.date).push(e)}let html=['일','월','화','수','목','금','토'].map(d=>`<div class="weekday">${d}</div>`).join('');const cells=Math.ceil((first+total)/7)*7;
- for(let i=0;i<cells;i++){const n=i-first+1,inMonth=n>0&&n<=total;const dt=inMonth?`${yy}-${String(mm).padStart(2,'0')}-${String(n).padStart(2,'0')}`:'';const dayEvents=map.get(dt)||[];html+=`<div class="day ${inMonth?'':'other'} ${dt===chosen?'chosen':''} ${dt===dayNow()?'today':''}" data-date="${dt}" ${inMonth?`tabindex="0" role="button" aria-label="${dt} 일정 ${dayEvents.length}개, 날짜 선택"`:''}><div class="num">${inMonth?n:''}</div>${dayEvents.slice(0,(window.innerWidth<=730?2:3)).map(e=>`<div class="day-event ${e.type} ${isApplied(e.job)?'applied-event':''} ${e.job.end_date&&e.job.end_date<dayNow()?'is-archived':''}" style="--event:${eventColor(e.type)}" title="${esc(e.job.company)} · ${esc(e.label||EVENT_NAMES[e.type])}"><small>${esc(e.label||EVENT_NAMES[e.type])}</small><span class="event-company">${esc(e.job.company)}</span>${startDeadlineLabel(e,true)?`<span class="day-countdown" title="${esc(startDeadlineLabel(e,false))}">${esc(startDeadlineLabel(e,window.innerWidth<=730))}</span>`:''}</div>`).join('')}${dayEvents.length>(window.innerWidth<=730?2:3)?`<span class="more">+${dayEvents.length-(window.innerWidth<=730?2:3)}개 더보기</span>`:''}</div>`}
+ for(let i=0;i<cells;i++){const n=i-first+1,inMonth=n>0&&n<=total;const dt=inMonth?`${yy}-${String(mm).padStart(2,'0')}-${String(n).padStart(2,'0')}`:'';const dayEvents=map.get(dt)||[],preview=groupedCalendarPreview(dayEvents);html+=`<div class="day ${inMonth?'':'other'} ${dt===chosen?'chosen':''} ${dt===dayNow()?'today':''}" data-date="${dt}" ${inMonth?`tabindex="0" role="button" aria-label="${dt} 일정 ${dayEvents.length}개, 날짜 선택"`:''}><div class="num">${inMonth?n:''}</div>${preview.slice(0,(window.innerWidth<=730?2:3)).map(e=>`<div class="day-event ${e.type} ${e.applied?'applied-event':''} ${e.archived?'is-archived':''}" style="--event:${eventColor(e.type)}" title="${esc(e.job.company)} · ${esc(e.label||EVENT_NAMES[e.type])}${e.count>1?` · ${e.count}개 공고`:``}"><small>${esc(e.label||EVENT_NAMES[e.type])}</small><span class="event-company">${esc(e.job.company)}${e.count>1?` (${e.count}건)`:``}</span>${startDeadlineLabel(e,true)?`<span class="day-countdown" title="${esc(startDeadlineLabel(e,false))}">${esc(startDeadlineLabel(e,window.innerWidth<=730))}</span>`:''}</div>`).join('')}${preview.length>(window.innerWidth<=730?2:3)?`<span class="more">+${preview.length-(window.innerWidth<=730?2:3)}개 더보기</span>`:''}</div>`}
  $('calendarGrid').innerHTML=html;renderSelected(map);}
 function quickDateOffset(dt,step){const parts=dt.split('-').map(Number);const d=new Date(parts[0],parts[1]-1,parts[2]+step,12);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function showQuickDate(dt,moveFocus){if(!dateOnly(dt))return;settings.selected=dt;settings.month=dt.slice(0,7);render();const order={close:0,start:1,result:2,test:3};const evs=eventsFor(visible()).filter(e=>e.date===dt).sort((a,b)=>(order[a.type]??9)-(order[b.type]??9)||a.job.company.localeCompare(b.job.company,'ko'));
