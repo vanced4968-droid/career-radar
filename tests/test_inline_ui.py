@@ -28,5 +28,11 @@ class UserInterfaceSmokeTest(unittest.TestCase):
                           capture_output=True,text=True,timeout=25)
         self.assertEqual(cp.returncode,0,cp.stdout+"\n"+cp.stderr)
 
+    @unittest.skipUnless(shutil.which("node"),"Node.js required for calendar UI tests")
+    def test_mobile_calendar_d_day_and_swipe(self):
+        cp=subprocess.run(["node","tests/test_calendar_ux.js"],cwd=HTML.parent,
+                          capture_output=True,text=True,timeout=25)
+        self.assertEqual(cp.returncode,0,cp.stdout+"\n"+cp.stderr)
+
 if __name__=="__main__":
     unittest.main()
