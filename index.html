@@ -213,7 +213,7 @@ function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function stableHash(s){let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return (h>>>0).toString(36)}
 function normCompany(str){let s=String(str||'').toLowerCase().replace(/\(주\)|㈜|주식회사|\s*\(주\)|\s*주\)/gi,'').replace(/[\s\-_.()]/g,'');return aliases[s]||s}
 function normTitle(t){return String(t||'').toLowerCase().replace(/2026년?|하반기|상반기|신입사원|신입|경력|채용|공채|공개채용|모집|정규직|\s|[()[\]·.,:_\-]/g,'').slice(0,90)}
-function isGeneric(x){return !x.title||x.title.includes('공채달력 등록 일정')}
+function isGeneric(x){return !x.title||/^공채달력\s*(?:등록\s*)?일정(?:\s|·|$)/.test(String(x.title).trim())}
 function cleanJob(x){const source=['jobkorea','jasoseol','manual'].includes(x.source)?x.source:'manual';const url=String(x.url||'');return {id:String(x.id||`${source}-${stableHash(JSON.stringify(x))}`),company:String(x.company||'').trim().slice(0,110),title:String(x.title||'공고명 미확인').trim().slice(0,250),positions:String(x.positions||'').slice(0,700),company_type:TYPES.includes(x.company_type)?x.company_type:'기타',employment:String(x.employment||'미확인'),start_date:dateOnly(x.start_date),end_date:dateOnly(x.end_date),result_date:dateOnly(x.result_date),test_date:dateOnly(x.test_date),url:/^https?:\/\//i.test(url)?url:'',source,source_detail:String(x.source_detail||''),verified:String(x.verified||''),note:String(x.note||'').slice(0,700),field:FIELDS.includes(x.field)?x.field:''}}
 function dateOnly(v){return /^\d{4}-\d{2}-\d{2}$/.test(String(v||''))?String(v):''}
 function uniqueDatesMatch(a,b){return !!Object.values(EVENT_KEYS).some(k=>a[k]&&b[k]&&a[k]===b[k])}
