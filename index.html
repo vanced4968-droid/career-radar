@@ -154,6 +154,24 @@
   .day{min-height:117px}
 }
 @media(max-width:380px){.day{min-height:114px}.day-event .day-countdown{font-size:8px!important}}
+
+/* Calendar-bottom date list: convenient inline previous / next controls. */
+.selected-day-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
+.selected-day-info{flex:1;min-width:0;text-align:center;}
+.selected-day-info h3{margin:0 0 5px;color:#1b3154;font-size:16px;line-height:1.4;}
+.selected-day-info p{margin:0;color:#8495ac;font-size:11px;line-height:1.4;}
+.selected-day-nav{display:inline-flex;align-items:center;justify-content:center;flex:none;
+ min-height:40px;min-width:91px;padding:8px 12px;border:1px solid #d5e2f5;
+ border-radius:10px;background:#f3f7ff;color:#255eaf;font-weight:800;font-size:12px;white-space:nowrap;
+ transition:background .15s,border-color .15s;}
+.selected-day-nav:hover{background:#e4efff;border-color:#a8c3f6;}
+.selected-day-nav:active{background:#dceaff;}
+@media(max-width:730px){
+ .selected-day-toolbar{gap:6px;margin-bottom:12px;}
+ .selected-day-info h3{font-size:13px;letter-spacing:-.3px;}
+ .selected-day-info p{font-size:10px;}
+ .selected-day-nav{min-width:67px;min-height:38px;padding:8px 7px;font-size:11px;border-radius:8px;}
+}
 </style>
 </head>
 <body>
@@ -200,7 +218,14 @@
    <div class="filter-tail"><div class="filter-header"><strong>출처</strong></div><select id="sourceFilter" aria-label="출처"><option value="all">모든 출처</option><option value="both">두 사이트 공통</option><option value="jobkorea">잡코리아</option><option value="jasoseol">자소설닷컴</option><option value="manual">직접 등록</option></select></div>
   </section>
   <section class="content"><div class="content-head"><div><h2 id="viewTitle">통합 채용 달력</h2><p id="viewSub">지원 시작 · 마감 · 결과 발표 · 인적성 일정</p></div><div class="view-actions"><label class="check-wrap"><input id="showEnded" type="checkbox" checked> 마감된 공고 포함</label><div class="segmented"><button id="monthView" class="on">달력</button><button id="listView">목록</button></div></div></div>
-   <div id="calendarPanel"><div class="calendar-tools"><div class="month-nav"><button id="prevMonth" aria-label="이전 달">‹</button><h3 id="monthTitle">2026년 10월</h3><button id="nextMonth" aria-label="다음 달">›</button><button class="today-btn" id="goToday">오늘</button></div><div id="eventLegend" class="legend"><label><input type="checkbox" value="start" checked><i class="event-dot start"></i> 시작</label><label><input type="checkbox" value="close" checked><i class="event-dot close"></i> 마감</label><label><input type="checkbox" value="result" checked><i class="event-dot result"></i> 발표</label><label><input type="checkbox" value="test" checked><i class="event-dot test"></i> 인적성</label></div></div><div id="calendarGrid" class="calendar-grid"></div><div class="day-events"><div><h3 id="selectedDateTitle">선택한 날짜</h3><p>날짜를 선택하면 해당 일정을 확인할 수 있어요.</p></div><div id="selectedEvents"></div></div></div>
+   <div id="calendarPanel"><div class="calendar-tools"><div class="month-nav"><button id="prevMonth" aria-label="이전 달">‹</button><h3 id="monthTitle">2026년 10월</h3><button id="nextMonth" aria-label="다음 달">›</button><button class="today-btn" id="goToday">오늘</button></div><div id="eventLegend" class="legend"><label><input type="checkbox" value="start" checked><i class="event-dot start"></i> 시작</label><label><input type="checkbox" value="close" checked><i class="event-dot close"></i> 마감</label><label><input type="checkbox" value="result" checked><i class="event-dot result"></i> 발표</label><label><input type="checkbox" value="test" checked><i class="event-dot test"></i> 인적성</label></div></div><div id="calendarGrid" class="calendar-grid"></div><div class="day-events">
+     <div class="selected-day-toolbar" aria-label="날짜별 기업 일정 탐색">
+      <button id="selectedPrevDay" class="selected-day-nav" type="button" aria-label="이전날 기업 일정 보기">← 이전날</button>
+      <div class="selected-day-info"><h3 id="selectedDateTitle">선택한 날짜</h3><p id="selectedDayCount" aria-live="polite">날짜별 일정</p></div>
+      <button id="selectedNextDay" class="selected-day-nav" type="button" aria-label="다음날 기업 일정 보기">다음날 →</button>
+     </div>
+     <div id="selectedEvents"></div>
+    </div></div>
    <div id="listPanel" hidden><div class="list-summary"><span id="countText"></span><select id="sortFilter" aria-label="정렬"><option value="deadline">마감 가까운 순</option><option value="recent">최근 시작 순</option><option value="company">기업명 순</option><option value="applied">지원일 최신순</option></select></div><div id="jobList" class="job-list"></div></div>
    <p class="local-backup-hint">🔒 지원 상태·지원일·메모는 이 기기에만 저장돼요. 휴대폰 변경이나 브라우저 데이터 삭제에 대비해 상단의 「내 데이터 내보내기」로 가끔 백업해 주세요.</p>
    <div class="integrity"><div class="integrity-icon">i</div><div><strong>데이터 정확도 안내</strong><p>두 사이트가 공개한 공고만 표시합니다. 모든 채용공고를 빠짐없이 수집한다는 보장은 없으며, 발표 일정은 등록된 경우에만 표시합니다. 마감과 결과는 원본 공고에서 다시 확인해 주세요. <span id="sourceHealth"></span></p></div></div>
@@ -351,7 +376,7 @@ $('quickDayEvents').innerHTML=evs.length?evs.map(e=>'<button class="quick-item" 
 $('quickDayEvents').scrollTop=0;$('dateQuickView').hidden=false;if(moveFocus===true)$('quickClose').focus({preventScroll:true})}
 function hideQuickDate(restoreFocus){$('dateQuickView').hidden=true;if(restoreFocus!==false){const cell=Array.from(document.querySelectorAll('#calendarGrid .day[data-date]')).find(x=>x.dataset.date===settings.selected);if(cell)cell.focus({preventScroll:true})}}
 function eventColor(t){return {start:'#2f83eb',close:'#f06777',result:'#21ac88',test:'#a46af3'}[t]||'#556'}
-function renderSelected(map){const dt=settings.selected||dayNow();$('selectedDateTitle').textContent=md(dt)+' 일정';const evs=map.get(dt)||[];$('selectedEvents').innerHTML=evs.length?evs.map(e=>`<div class="day-event-row"><span class="event-type ${e.type}">${EVENT_NAMES[e.type]}</span><button data-id="${esc(e.job.id)}"><strong>${esc(e.job.company)}</strong><small>${esc(e.job.title)}</small>${startDeadlineLabel(e,false)?`<span class="start-deadline">${esc(startDeadlineLabel(e,false))}</span>`:''}</button><span class="pill">${esc(e.job.company_type)}</span></div>`).join(''):'<div class="empty" style="padding:18px">선택한 조건에 해당하는 일정이 없어요.</div>'}
+function renderSelected(map){const dt=settings.selected||dayNow();$('selectedDateTitle').textContent=md(dt)+' 일정';const evs=map.get(dt)||[];$('selectedDayCount').textContent=evs.length+'개 일정 · 기업을 누르면 상세 보기';$('selectedEvents').innerHTML=evs.length?evs.map(e=>`<div class="day-event-row"><span class="event-type ${e.type}">${EVENT_NAMES[e.type]}</span><button data-id="${esc(e.job.id)}"><strong>${esc(e.job.company)}</strong><small>${esc(e.job.title)}</small>${startDeadlineLabel(e,false)?`<span class="start-deadline">${esc(startDeadlineLabel(e,false))}</span>`:''}</button><span class="pill">${esc(e.job.company_type)}</span></div>`).join(''):'<div class="empty" style="padding:18px">선택한 조건에 해당하는 일정이 없어요.</div>'}
 function renderList(){
  const list=visible(),sort=$('sortFilter').value;
  list.sort((a,b)=>{
@@ -385,6 +410,15 @@ function allEventsSetup(){document.querySelectorAll('#fieldFilters input').forEa
  $('calendarGrid').addEventListener('click',e=>{const day=e.target.closest('.day[data-date]');if(day&&day.dataset.date)showQuickDate(day.dataset.date)});
  $('calendarGrid').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('.day[data-date]')){e.preventDefault();showQuickDate(e.target.dataset.date)}});
  $('quickClose').onclick=()=>hideQuickDate();
+function moveSelectedDay(direction){
+ const next=quickDateOffset(settings.selected||dayNow(),direction);
+ if(!$('dateQuickView').hidden){showQuickDate(next,false);return}
+ settings.selected=next;
+ settings.month=next.slice(0,7);
+ render();
+}
+$('selectedPrevDay').onclick=()=>moveSelectedDay(-1);
+$('selectedNextDay').onclick=()=>moveSelectedDay(1);
 $('quickPrev').onclick=()=>showQuickDate(quickDateOffset(settings.selected,-1),false);$('quickNext').onclick=()=>showQuickDate(quickDateOffset(settings.selected,1),false);
 let quickSwipeStart=null,quickSwipeSuppressClick=false;
 $('quickDayEvents').addEventListener('touchstart',e=>{
