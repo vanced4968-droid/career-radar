@@ -152,8 +152,17 @@ def scan_jasoseol():
 # This is a lower-volume fallback when the source's public HTML rejects GitHub runners.
 def public_reader(url):
     reader_url = "https://r.jina.ai/" + url
-    response = S.get(reader_url, timeout=60, headers={"Accept":"text/plain"})
-    response.raise_for_status()
+    last_error=None
+    for attempt in range(3):
+        try:
+            response = S.get(reader_url, timeout=60,
+                             headers={"Accept":"text/plain","X-Cache-Tolerance":"1800"})
+            response.raise_for_status()
+            break
+        except requests.RequestException as error:
+            last_error=error
+            if attempt==2: raise
+            time.sleep(6*(attempt+1))
     if len(response.content) > 12000000:
         raise RuntimeError("public reader response too large")
     body = response.text
@@ -231,7 +240,8 @@ def fallback_jobkorea():
 
 def fallback_jasoseol():
     records={}
-    for n in range(1,4):
+    max_pages=max(1,min(int(os.getenv("JASO_PAGES","5")),8))
+    for n in range(1,max_pages+1):
         if n>1:time.sleep(1.5)
         url=JS if n==1 else JS+"?page="+str(n)
         batch=reader_jasoseol(public_reader(url))
