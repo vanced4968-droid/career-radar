@@ -47,6 +47,7 @@
  <main class="main">
   <header class="topbar"><div class="topbar-kicker">RECRUITMENT INTELLIGENCE <span class="kicker-dot">●</span> 개인용</div><div class="top-actions"><span class="date-now" id="todayLabel"></span><button class="btn ghost small" id="exportBtn">내 데이터 내보내기 ↓</button></div></header>
   <section class="headline"><div><div class="eyebrow">두 사이트의 채용정보를, 한곳에서.</div><h1>나의 채용 레이더 <span class="wave">✳</span></h1><p>잡코리아 + 자소설닷컴 통합 · 중복 공고 정리 · 전기공학 맞춤 탐색</p></div><button class="btn primary" id="addBtn"><span>＋</span> 공고 추가하기</button></section>
+  <p id="refreshStatus" role="status" style="font-size:12px;color:#647590;line-height:1.55;margin:-13px 0 18px 3px">매일 00:00(한국시간) 자동 갱신 시도 · 데이터 확인 중</p>
   <section class="stats"><div class="stat"><span>통합 공고</span><div><strong id="statTotal">—</strong><em>건</em></div><small>중복 통합 후</small></div><div class="stat"><span>지금 접수 중</span><div><strong id="statActive">—</strong><em>건</em></div><small>확인된 접수 기간 기준</small></div><div class="stat"><span>7일 이내 마감</span><div><strong id="statSoon">—</strong><em>건</em></div><small>마감 일정이 있는 공고</small></div><div class="stat"><span>내 관심 공고</span><div><strong id="statSaved">—</strong><em>건</em></div><small>이 기기에 저장됨</small></div></section>
   <section class="toolbar"><div class="searchbox"><span>⌕</span><input id="search" type="search" placeholder="기업명, 직무, 공고명 검색 (예: 전기, HD현대)" autocomplete="off"></div><div class="toolbar-actions"><button id="clearFilters" class="btn ghost small">필터 초기화 ↺</button><button id="importBtn" class="btn outline small">↑ 공고 가져오기</button><input type="file" id="importFile" accept=".json,.csv,text/csv,application/json" hidden></div></section>
   <section class="filters" aria-label="채용공고 필터">
@@ -174,6 +175,7 @@ function updateHealth(){
  $('healthDot').className='pulse '+(snapshot?(attempted?'fail':''):failed.length?'fail':'ok');
  const when=baseData.updated_at?new Date(baseData.updated_at).toLocaleString('ko-KR'):'업데이트 시각 없음';
  $('updatedAt').textContent='자료 기준: '+when;
+ $('refreshStatus').textContent='매일 00:00(한국시간) 갱신 시도 · '+(snapshot?(attempted?'최신 공고 수집 실패, 이전 자료를 표시 중':'초기 표본 자료 표시 중'):failed.length?'일부 사이트 자료 수집 실패':'최근 데이터 수집 성공')+' · 자료 기준 '+when;
  const label=s=>snapshot?(attempted?'수집 실패':'초기 표본'):info[s]?.ok?'수집 성공':'수집 실패';
  $('sourceHealth').textContent=' · '+sources.map(s=>names[s]+': '+label(s)+' '+(info[s]?.count??0)+'건').join(' / ')+(attempted?' · 마지막 수집 시도 '+new Date(baseData.last_attempt_at).toLocaleString('ko-KR'):' · 최초 자료는 일부만 수록');
 }
