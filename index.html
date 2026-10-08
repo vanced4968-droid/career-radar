@@ -349,13 +349,14 @@ function counts(){const today=dayNow();$('statTotal').textContent=merged.length;
 function updateHealth(){
  const info=baseData.source_status||{}, names={jobkorea:'잡코리아',jasoseol:'자소설닷컴'};
  const sources=Object.keys(names), failed=sources.filter(s=>!info[s]?.ok);
+ const failedPages=sources.reduce((sum,s)=>sum+(Number(info[s]?.page_failures)||0),0);
  const attempted=!!baseData.last_attempt_at;
  const snapshot=baseData.mode==='snapshot';
- $('syncState').textContent=snapshot?(attempted?'자동 수집 실패 · 이전 자료 유지':'초기 자료 · 자동갱신 전'):failed.length?'일부 출처 수집 실패':'공개 페이지 일부 수집 성공';
+ $('syncState').textContent=snapshot?(attempted?'자동 수집 실패 · 이전 자료 유지':'초기 자료 · 자동갱신 전'):failed.length?'일부 출처 수집 실패':failedPages?'일부 페이지 누락 가능':'공개 페이지 일부 수집 성공';
  $('healthDot').className='pulse '+(snapshot?(attempted?'fail':''):failed.length?'fail':'ok');
  const when=baseData.updated_at?new Date(baseData.updated_at).toLocaleString('ko-KR'):'업데이트 시각 없음';
  $('updatedAt').textContent='자료 기준: '+when;
- $('refreshStatus').textContent='매일 00:00(한국시간) 갱신 시도 · '+(snapshot?(attempted?'최신 공고 수집 실패, 이전 자료를 표시 중':'초기 표본 자료 표시 중'):failed.length?'일부 사이트 자료 수집 실패':'최근 데이터 수집 성공')+' · 자료 기준 '+when;
+ $('refreshStatus').textContent='매일 00:00(한국시간) 갱신 시도 · '+(snapshot?(attempted?'최신 공고 수집 실패, 이전 자료를 표시 중':'초기 표본 자료 표시 중'):failed.length?'일부 사이트 자료 수집 실패':failedPages?'일부 페이지 수집 실패 · 이전 자료와 합쳐 표시':'공개 채용 페이지 일부 갱신 성공')+' · 자료 기준 '+when;
  const label=s=>snapshot?(attempted?'수집 실패':'초기 표본'):info[s]?.ok?'수집 성공':'수집 실패';
  const audit=(s)=>{const o=info[s]||{};const pages=o.pages_scanned===undefined?'':(' '+o.pages_scanned+'페이지');const fail=o.page_failures?(' · 실패 '+o.page_failures+'페이지'):'';return names[s]+': '+label(s)+' '+(o.count??0)+'건'+pages+fail;};
  $('sourceHealth').textContent=' · '+sources.map(audit).join(' / ')+(attempted?' · 마지막 수집 시도 '+new Date(baseData.last_attempt_at).toLocaleString('ko-KR'):' · 최초 자료는 일부만 수록');
