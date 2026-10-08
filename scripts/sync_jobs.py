@@ -171,6 +171,18 @@ def public_reader(url):
         raise RuntimeError("public reader returned no markdown document")
     return body.split("Markdown Content:",1)[1]
 
+def parse_deadline_timestamp(text, fallback_date):
+    """Treat verified 00:00 Korean application deadline as the prior calendar day."""
+    match=re.search(r"~\s*(20\d{2})년\s*(\d{1,2})월\s*(\d{1,2})일\s*([01]?\d|2[0-3]):([0-5]\d)",text or "")
+    if not match:return fallback_date,""
+    try:
+        y,mo,d,h,mi=map(int,match.groups())
+        dt=datetime(y,mo,d,h,mi,tzinfo=KST)
+    except ValueError:return fallback_date,""
+    effective=(dt-timedelta(days=1)).date() if h==0 and mi==0 else dt.date()
+    return effective.isoformat(),dt.isoformat(timespec="minutes")
+
+
 def reader_jasoseol(md):
     # The official public listing's read-only markdown cards include /recruit/ID links.
     card = re.compile(
@@ -185,6 +197,7 @@ def reader_jasoseol(md):
             continue
         period = re.search(r"(?<!\d)(\d{2}/\d{2}/\d{2})\s*[-~]\s*(\d{2}/\d{2}/\d{2})",content)
         start, end = (date(period[1]),date(period[2])) if period else ("","")
+        end, end_datetime = parse_deadline_timestamp(content,end)
         company_type = ("대기업" if "대기업" in content else "중견기업" if "중견기업" in content
                         else "공기업" if "공기업" in content or "공공기관" in content else "기타")
         employment = next((v for v in ("신입","인턴","경력","계약직") if v in content),"미확인")
@@ -193,7 +206,7 @@ def reader_jasoseol(md):
         results.append(dict(id="jasoseol-"+jid,source="jasoseol",
             source_detail="자소설닷컴 공개 페이지 메타데이터",company=company,
             title=headline[:200],positions=headline[:800],company_type=company_type,
-            employment=employment,start_date=start,end_date=end,result_date="",
+            employment=employment,start_date=start,end_date=end,end_datetime=end_datetime,result_date="",
             test_date="",url=url,verified=NOW.date().isoformat()))
     return list({j["id"]:j for j in results}.values())
 
