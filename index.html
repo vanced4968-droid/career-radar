@@ -384,7 +384,7 @@ function allEventsSetup(){document.querySelectorAll('#fieldFilters input').forEa
  $('monthView').onclick=()=>{settings.view='calendar';render()};$('listView').onclick=()=>{settings.view='list';render()};document.querySelectorAll('.nav[data-view]').forEach(b=>b.onclick=()=>{settings.view=b.dataset.view;render()});$('exportBtn').onclick=exportData;
  $('calendarGrid').addEventListener('click',e=>{const day=e.target.closest('.day[data-date]');if(day&&day.dataset.date)showQuickDate(day.dataset.date)});
  $('calendarGrid').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('.day[data-date]')){e.preventDefault();showQuickDate(e.target.dataset.date)}});
- $('quickClose').onclick=()=>hideQuickDate();document.querySelector('#dateQuickView [data-quick-close]').onclick=()=>hideQuickDate();
+ $('quickClose').onclick=()=>hideQuickDate();
 $('quickPrev').onclick=()=>showQuickDate(quickDateOffset(settings.selected,-1),false);$('quickNext').onclick=()=>showQuickDate(quickDateOffset(settings.selected,1),false);
 let quickSwipeStart=null,quickSwipeSuppressClick=false;
 $('quickDayEvents').addEventListener('touchstart',e=>{
