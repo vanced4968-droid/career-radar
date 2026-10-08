@@ -6,6 +6,8 @@ on:
   schedule:
     - cron: '0 0 * * *'
       timezone: 'Asia/Seoul'
+    - cron: '30 0 * * *'
+      timezone: 'Asia/Seoul'
 
 permissions:
   contents: write
@@ -38,10 +40,9 @@ jobs:
         if: github.event_name != 'push' || contains(github.event.head_commit.message, '[refresh-check]')
         run: python scripts/sync_jobs.py
         env:
-          JASO_PAGES: '3'
+          JASO_PAGES: '5'
       - name: Save updated public metadata to repository
         if: github.event_name != 'push' || contains(github.event.head_commit.message, '[refresh-check]')
-        continue-on-error: true
         run: |
           git config user.name "Career Radar Bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -67,3 +68,7 @@ jobs:
       - name: Deploy GitHub Pages
         id: deploy
         uses: actions/deploy-pages@v4
+      - name: Signal failure if both sources failed
+        if: github.event_name != 'push' || contains(github.event.head_commit.message, '[refresh-check]')
+        run: |
+          python -c 'import json,sys; x=json.load(open("data/jobs.json")); y=x.get("source_status",{}); ok=any(v.get("ok") for v in y.values()); print("PUBLIC_DATA_UPDATED" if ok else "BOTH_SOURCES_UNAVAILABLE"); sys.exit(0 if ok else 1)'
