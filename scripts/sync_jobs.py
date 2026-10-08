@@ -246,7 +246,8 @@ def target_pages(first, count):
     start=max(first+1,int(os.getenv("JASO_DEEP_START","25")))
     span=max(1,min(int(os.getenv("JASO_DEEP_SPAN","300")),500))
     day_number=NOW.date().toordinal()
-    slot=1 if NOW.hour>=0 and NOW.minute>=25 else 0
+    scan_slot=os.getenv('JASO_SCAN_SLOT','')
+    slot=(1 if scan_slot=='backup' else 0) if scan_slot in ('primary','backup') else (1 if NOW.minute>=25 else 0)
     offset=((day_number*count*2+slot*count) % span) if count else 0
     older=[start+((offset+i)%span) for i in range(count)]
     return [*range(1,first+1),*older]
