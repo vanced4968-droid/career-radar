@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - ".github/workflows/probe.yml"
+      - "scripts/probe_sources.py"
   workflow_dispatch:
 permissions:
   contents: read
