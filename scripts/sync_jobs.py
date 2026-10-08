@@ -283,7 +283,8 @@ def main():
     for j in [*previous.get("jobs",[]),*incoming]:
         if isinstance(j,dict) and j.get("id") and j.get("source"):
             jobs[(j["source"],j["id"])]=j
-    cutoff=(NOW.date()-timedelta(days=120)).isoformat()
+    # Keep ended postings in the public archive for two years; user application snapshots persist locally.
+    cutoff=(NOW.date()-timedelta(days=730)).isoformat()
     kept=[j for j in jobs.values() if
           max((j.get(k,"") or "" for k in ("start_date","end_date","result_date","test_date")),default="") >=cutoff or
           not any(j.get(k) for k in ("start_date","end_date","result_date","test_date"))]
