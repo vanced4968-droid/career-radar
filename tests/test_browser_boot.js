@@ -26,6 +26,12 @@ async function main(){
   const count=Number(d.querySelector('#statTotal').textContent);
   assert(count>0,'job count is not populated: '+count);
   assert(d.querySelector('#syncState').textContent.trim(),'status not rendered');
+  d.querySelector('#listView').click();
+  const defaultVisible=d.querySelectorAll('#jobList .job-item').length;
+  d.querySelector('#clearFilters').click();
+  const allVisible=d.querySelectorAll('#jobList .job-item').length;
+  console.log('COVERAGE_AUDIT raw='+jobs.jobs.length+' merged='+count+' default_filters='+defaultVisible+' cleared_filters='+allVisible);
+  d.querySelector('#monthView').click();
   const target=d.querySelector('.day[data-date="2026-10-14"]');
   assert(target,'2026-10-14 is missing');
   target.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true}));
