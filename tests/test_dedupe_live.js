@@ -32,4 +32,31 @@ assert.strictEqual(distinct.length,2,'same company / dates but different jobs mu
 const otherGeneric={...example,id:'test-c',source:'jobkorea',title:'공채달력 일정 · 원본 공고 확인 필요',positions:'',url:'https://www.jobkorea.co.kr/starter/calendar'};
 const ambiguous=context._dedupe([example,variant,otherGeneric]);
 assert.strictEqual(ambiguous.length,3,'ambiguous calendar entry must not be merged arbitrarily');
-console.log('PASS real data deduplication + different-job and ambiguity regressions');
+
+const sameLinkOld={...example,id:'legacy-1',end_date:'2026-10-14',
+                   url:'https://jasoseol.com/recruit/999991',title:'발전설비 설계 엔지니어 모집'};
+const sameLinkNew={...example,id:'jasoseol-999991',end_date:'2026-10-13',
+                   end_datetime:'2026-10-14T00:00+09:00',
+                   title:'2026 하반기 발전설비 설계 엔지니어 모집 발전사업부'};
+const changed=context._dedupe([sameLinkOld,sameLinkNew]);
+assert.equal(changed.length,1,'same source URL must merge even if deadlines conflict');
+assert.equal(changed[0].end_date,'2026-10-13','confirmed midnight deadline must win');
+assert.equal(changed[0].end_datetime,'2026-10-14T00:00+09:00','precise source deadline must be retained');
+const full=context._dedupe(jobData), seenBySourceId=new Map(), conflicts=[];
+for(const g of full){
+  for(const l of g.links||[]){
+    const u=new URL(l.url);
+    const jas=u.hostname.endsWith('jasoseol.com')&&u.pathname.match(/^\/recruit\/(\d+)\/?$/i);
+    const job=u.hostname.endsWith('jobkorea.co.kr')&&u.pathname.match(/^\/Recruit\/GI_Read\/(\d+)\/?$/i);
+    const key=jas?'jasoseol:'+jas[1]:job?'jobkorea:'+job[1]:null;
+    if(!key)continue;
+    if(seenBySourceId.has(key)&&seenBySourceId.get(key)!==g.id)conflicts.push([key,seenBySourceId.get(key),g.id]);
+    seenBySourceId.set(key,g.id);
+  }
+}
+console.log('LIVE_DEDUPE_AUDIT raw='+jobData.length+' merged='+full.length+
+            ' canonical_jobs='+seenBySourceId.size+' canonical_conflicts='+conflicts.length,
+            'samples='+JSON.stringify(conflicts.slice(0,7)));
+assert.deepEqual(conflicts,[],'same canonical job appears in multiple merged groups');
+console.log('PASS real data deduplication, canonical identity, midnight preference, different-job checks');
+
