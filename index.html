@@ -309,8 +309,17 @@ function matchScore(a,b){
  const aLinks=new Set(a.links.map(l=>canonicalJobLink(l.url)).filter(Boolean));
  if(b.links.some(l=>aLinks.has(canonicalJobLink(l.url))&&!!canonicalJobLink(l.url)))return 20;
  if(normCompany(a.company)!==normCompany(b.company))return -1;
- if(datesContradict(a,b))return -1;
  const ga=isGeneric(a),gb=isGeneric(b),sameDate=uniqueDatesMatch(a,b);
+ // One site may record an exact 00:00 deadline as the next day while another
+ // has already converted it to the final application calendar date.
+ // Reconcile only when both have the same non-generic job title/start date.
+ if(datesContradict(a,b)){
+  const preciseMidnight=[a.end_datetime,b.end_datetime].some(t=>/T00:00(?:\+|$)/.test(t||''));
+  const titleA=normTitle(a.title),titleB=normTitle(b.title);
+  const samePosting=!ga&&!gb&&titleA.length>=5&&titleA===titleB;
+  const oneDayApart=!!a.end_date&&!!b.end_date&&Math.abs(daysBetween(a.end_date,b.end_date))===1;
+  if(!(preciseMidnight&&samePosting&&a.start_date&&a.start_date===b.start_date&&oneDayApart))return -1;
+ }
  if(!ga&&!gb){
   const ta=normTitle(a.title),tb=normTitle(b.title);
   const sameTitle=ta.length>=4&&tb.length>=4&&(ta===tb||ta.includes(tb)||tb.includes(ta));
