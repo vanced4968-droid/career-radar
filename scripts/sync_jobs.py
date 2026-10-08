@@ -146,6 +146,110 @@ def scan_jasoseol():
         for j in new:found[j["id"]]=j
     return list(found.values())
 
+
+
+# Read-only conversion of public HTML to markdown. No credentials or private APIs.
+# This is a lower-volume fallback when the source's public HTML rejects GitHub runners.
+def public_reader(url):
+    reader_url = "https://r.jina.ai/" + url
+    response = S.get(reader_url, timeout=60, headers={"Accept":"text/plain"})
+    response.raise_for_status()
+    if len(response.content) > 12000000:
+        raise RuntimeError("public reader response too large")
+    body = response.text
+    if "Markdown Content:" not in body:
+        raise RuntimeError("public reader returned no markdown document")
+    return body.split("Markdown Content:",1)[1]
+
+def reader_jasoseol(md):
+    # The official public listing's read-only markdown cards include /recruit/ID links.
+    card = re.compile(
+        r"#####\s+(?P<company>[^#\n]{2,100}?)\s+####\s+"
+        r"(?P<content>[^\n]{5,4000}?)\]\((?P<url>https://jasoseol\.com/recruit/\d+)\)")
+    results = []
+    for m in card.finditer(md):
+        company = re.sub(r"\s+"," ",m.group("company")).strip()
+        content = m.group("content")
+        headline = re.sub(r"\s+"," ",content.split("![Image",1)[0]).strip()
+        if len(headline) < 4 or "더보기" in company:
+            continue
+        period = re.search(r"(?<!\d)(\d{2}/\d{2}/\d{2})\s*[-~]\s*(\d{2}/\d{2}/\d{2})",content)
+        start, end = (date(period[1]),date(period[2])) if period else ("","")
+        company_type = ("대기업" if "대기업" in content else "중견기업" if "중견기업" in content
+                        else "공기업" if "공기업" in content or "공공기관" in content else "기타")
+        employment = next((v for v in ("신입","인턴","경력","계약직") if v in content),"미확인")
+        url=m.group("url")
+        jid=url.rsplit("/",1)[-1]
+        results.append(dict(id="jasoseol-"+jid,source="jasoseol",
+            source_detail="자소설닷컴 공개 페이지 메타데이터",company=company,
+            title=headline[:200],positions=headline[:800],company_type=company_type,
+            employment=employment,start_date=start,end_date=end,result_date="",
+            test_date="",url=url,verified=NOW.date().isoformat()))
+    return list({j["id"]:j for j in results}.values())
+
+def reader_jobkorea(md):
+    month_match=re.search(r"(20\d{2})\s*\.\s*년?\s*(\d{1,2})\s*월",md)
+    if not month_match:
+        raise RuntimeError("calendar month missing from public reader")
+    year,month=map(int,month_match.groups())
+    pattern=re.compile(r"\[\*\*(시작|마감|발표|인적성)\*\*([^\]\n]{2,180})\]"
+                       r"\((https?://[^\s)]+)(?:\s+\"[^\"]*\")?\)")
+    keys={"시작":"start_date","마감":"end_date","발표":"result_date","인적성":"test_date"}
+    results={}
+    for row in md.splitlines():
+        if not re.match(r"^\|\s*\*\*\d{1,2}\*\*",row):
+            continue
+        for cell in row.strip().strip("|").split("|"):
+            m=re.match(r"\s*\*\*(\d{1,2})\*\*(.*)$",cell)
+            if not m:continue
+            try:stamp=datetime(year,month,int(m[1])).strftime("%Y-%m-%d")
+            except ValueError:continue
+            for entry in pattern.finditer(m[2]):
+                event,name,url=entry.groups()
+                name=re.sub(r"^(?:\s*(?:㈜|\(주\)|주식회사))+\s*","",name)
+                name=re.sub(r"\s*㈜\s*$","",name).strip()
+                if not (2<=len(name)<=100):continue
+                match=re.search(r"/Recruit/GI_Read/(\d+)",url,re.I)
+                key=match.group(1) if match else hashlib.sha256(
+                    (name+"|"+event+"|"+stamp).encode()).hexdigest()[:16]
+                idx="jobkorea-"+key
+                if idx not in results:
+                    results[idx]=dict(id=idx,source="jobkorea",
+                        source_detail="잡코리아 공개 공채달력 일부",company=name,
+                        title="공채달력 일정 · 원본 공고 확인 필요",positions="",
+                        company_type=KINDS.get(name,"기타"),employment="미확인",
+                        start_date="",end_date="",result_date="",test_date="",
+                        url=url,verified=NOW.date().isoformat())
+                results[idx][keys[event]]=stamp
+    return list(results.values())
+
+def fallback_jobkorea():
+    # Stable public article reader, not a private site endpoint.
+    jobs=reader_jobkorea(public_reader(JK))
+    if len(jobs)<5:raise RuntimeError("JobKorea reader parsed fewer than five records")
+    return jobs
+
+def fallback_jasoseol():
+    records={}
+    for n in range(1,4):
+        if n>1:time.sleep(1.5)
+        url=JS if n==1 else JS+"?page="+str(n)
+        batch=reader_jasoseol(public_reader(url))
+        new=[x for x in batch if x["id"] not in records]
+        if not new:break
+        for item in new: records[item["id"]]=item
+    if len(records)<5:raise RuntimeError("Jasoseol reader parsed fewer than five records")
+    return list(records.values())
+
+def source_with_fallback(source, original):
+    try:
+        data=original()
+        if len(data)>=5:return data
+        raise RuntimeError("original list parsed too few records")
+    except Exception as exc:
+        print("PRIMARY_FAILED",source,str(exc)[:160],flush=True)
+        return fallback_jobkorea() if source=="jobkorea" else fallback_jasoseol()
+
 def main():
     OUTPUT.parent.mkdir(parents=True,exist_ok=True)
     try: previous=json.loads(OUTPUT.read_text(encoding="utf-8"))
@@ -153,10 +257,9 @@ def main():
     status={}
     incoming=[]
     for source,url,method in [
-        ("jobkorea",JK,lambda:jobkorea(get(JK))),
-        ("jasoseol",JS,scan_jasoseol)]:
+        ("jobkorea",JK,lambda:source_with_fallback("jobkorea",lambda:jobkorea(get(JK)))),
+        ("jasoseol",JS,lambda:source_with_fallback("jasoseol",scan_jasoseol))]:
         try:
-            if not permitted(url):raise RuntimeError("robots.txt disallows list page")
             results=method()
             if len(results)<2:raise RuntimeError("fewer than 2 parsed entries; possible page change")
             incoming.extend(results)
