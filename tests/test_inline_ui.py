@@ -22,5 +22,11 @@ class UserInterfaceSmokeTest(unittest.TestCase):
         self.assertNotIn("$('statSaved')",doc)
         self.assertNotIn("$('openOnly')",doc)
 
+    @unittest.skipUnless(shutil.which("node"),"Node.js required for dedupe regression")
+    def test_real_data_deduplication(self):
+        cp=subprocess.run(["node","tests/test_dedupe_live.js"],cwd=HTML.parent,
+                          capture_output=True,text=True,timeout=25)
+        self.assertEqual(cp.returncode,0,cp.stdout+"\n"+cp.stderr)
+
 if __name__=="__main__":
     unittest.main()
