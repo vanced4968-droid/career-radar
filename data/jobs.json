@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-10-10T00:13:13+09:00",
-  "last_attempt_at": "2026-10-10T00:13:13+09:00",
+  "updated_at": "2026-10-10T00:45:05+09:00",
+  "last_attempt_at": "2026-10-10T00:45:05+09:00",
   "mode": "automatic",
   "source_status": {
     "jobkorea": {
@@ -15,18 +15,19 @@
     },
     "jasoseol": {
       "ok": true,
-      "count": 557,
+      "count": 529,
       "note": "공개 채용검색 최신 페이지 + 대기업 + 이전 페이지 순환 수집; 자소설 채용달력 전수 접근 아님",
-      "pages_scanned": 39,
-      "page_failures": 3,
+      "pages_scanned": 38,
+      "page_failures": 4,
       "failed_page_samples": [
         "latest:5",
         "latest:16",
+        "latest:321",
         "large:8"
       ],
       "reported_site_results": 6268,
       "stream_counts": {
-        "latest": 467,
+        "latest": 439,
         "large": 90
       },
       "partial": true
