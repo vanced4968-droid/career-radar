@@ -354,14 +354,40 @@ function dedupe(raw){
  const cleaned=raw.map(cleanJob).filter(x=>x.company&&x.title),unique=[],seen=new Set();
  for(const x of cleaned){const key=x.source+'|'+x.id;if(seen.has(key))continue;seen.add(key);unique.push({...x,links:x.url?[{source:x.source,url:x.url}]:[],ids:[x.id]})}
  unique.sort((a,b)=>Number(isGeneric(a))-Number(isGeneric(b)));
- const groups=[];
+ // Index groups by normalized employer and canonical source URL. The previous
+ // implementation compared every incoming record with every existing group
+ // (O(n²)); the growing archive made the nightly regression test time out and
+ // could stall the browser on slower phones.
+ const groups=[],byCompany=new Map(),byCanonical=new Map();
+ const addIndex=(group)=>{
+  const company=normCompany(group.company);
+  if(!byCompany.has(company))byCompany.set(company,[]);
+  const companyGroups=byCompany.get(company);
+  if(!companyGroups.includes(group))companyGroups.push(group);
+  for(const link of group.links){
+   const key=canonicalJobLink(link.url);
+   if(!key)continue;
+   if(!byCanonical.has(key))byCanonical.set(key,[]);
+   const linked=byCanonical.get(key);
+   if(!linked.includes(group))linked.push(group);
+  }
+ };
  for(const x of unique){
-  const candidates=groups.map(g=>({g,score:matchScore(g,x)})).filter(o=>o.score>0).sort((a,b)=>b.score-a.score);
+  const canonicalKeys=x.links.map(l=>canonicalJobLink(l.url)).filter(Boolean);
+  let pool=[];
+  for(const key of canonicalKeys){for(const group of byCanonical.get(key)||[])if(!pool.includes(group))pool.push(group)}
+  if(!pool.length)pool=byCompany.get(normCompany(x.company))||[];
+  const candidates=pool.map(g=>({g,score:matchScore(g,x)})).filter(o=>o.score>0).sort((a,b)=>b.score-a.score);
   // Different positions often share a start/end date. If more than one could match,
   // leave them separate instead of guessing and hiding a real application.
   if(candidates.length===1 && candidates[0].score>=2)mergeInto(candidates[0].g,x);
   else if(candidates.length>1 && candidates[0].score>candidates[1].score && candidates[0].score>=8)mergeInto(candidates[0].g,x);
-  else groups.push(x);
+  else {groups.push(x);addIndex(x)}
+  // A merge can introduce additional canonical URLs; index them for later records.
+  if(candidates.length===1 && candidates[0].score>=2 ||
+     candidates.length>1 && candidates[0].score>candidates[1].score && candidates[0].score>=8){
+   addIndex(candidates[0].g);
+  }
  }
  return groups.map(g=>({...g,id:g.ids.find(id=>id.startsWith('js-'))||g.ids[0],fields:classify(g)}));
 }
